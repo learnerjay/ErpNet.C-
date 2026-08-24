@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -10,6 +11,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDatecsXIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
            DatecsXCommandOpenStornoDocument = 0x2b,
            // Unlike the classic ISL dialect, which has a separate command per level of detail,
@@ -32,6 +34,9 @@
 
         public override string GetTaxGroupText(TaxGroup taxGroup)
         {
+			_logger.LogDebug(">>> Entering GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
+			_logger.LogDebug("GetTaxGroupText(taxGroup={TaxGroup}): TaxGroup.TaxGroup1 → {Arg1}", taxGroup, TaxGroup.TaxGroup1);
+			_logger.LogDebug("<<< Exiting GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
             return taxGroup switch
             {
                 TaxGroup.TaxGroup1 => "1",
@@ -64,9 +69,12 @@
 
         public override DeviceStatusWithCashAmount Cash(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering Cash(credentials=<redacted>)");
             var (response, status) = Request(CommandMoneyTransfer, "0\t0\t");
             var statusEx = new DeviceStatusWithCashAmount(status);
+			_logger.LogDebug("Cash(credentials=<redacted>): statusEx → {StatusEx}", statusEx);
             var tabFields = response.Split('\t');
+			_logger.LogDebug("Cash(credentials=<redacted>): tabFields → {TabFields}", tabFields);
             if (tabFields.Length != 5)
             {
                 statusEx.AddInfo("Error occured while reading cash amount");
@@ -84,6 +92,7 @@
                     statusEx.Amount = decimal.Parse(amountString, CultureInfo.InvariantCulture) / 100m;
                 }
             }
+			_logger.LogDebug("<<< Exiting Cash(credentials=<redacted>)");
             return statusEx;
         }
 
@@ -144,6 +153,7 @@
 
         public override (System.DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogDebug(">>> Entering GetDateTime(DeviceStatus={DeviceStatus})", DeviceStatus);
             var (dateTimeResponse, deviceStatus) = Request(CommandGetDateTime);
             if (!deviceStatus.Ok)
             {
@@ -152,6 +162,7 @@
             }
 
             var fields = dateTimeResponse.Split('\t');
+			_logger.LogDebug("GetDateTime(DeviceStatus={DeviceStatus}): fields → {Fields}", DeviceStatus, fields);
             if (fields.Length < 2)
             {
                 deviceStatus.AddInfo($"Error occured while parsing date and time");
@@ -160,6 +171,7 @@
             }
 
             var fixedDateAndTimeString = fields[1].Replace(" DST", "");
+			_logger.LogDebug("GetDateTime(DeviceStatus={DeviceStatus}): fixedDateAndTimeString → {FixedDateAndTimeString}", DeviceStatus, fixedDateAndTimeString);
 
             try
             {
@@ -170,8 +182,10 @@
             }
             catch
             {
+				_logger.LogError("Exception in GetDateTime(DeviceStatus={DeviceStatus}): {Arg1}", DeviceStatus, e.Message);
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime(DeviceStatus={DeviceStatus})", DeviceStatus);
                 return (null, deviceStatus);
             }
         }
@@ -312,6 +326,9 @@
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "0",
@@ -420,6 +437,7 @@
 
         protected override string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogDebug(">>> Entering FormatPeriodReportDate(date={Date})", date);
             return date.ToString("dd-MM-yy", CultureInfo.InvariantCulture);
         }
 
@@ -453,6 +471,7 @@
 
         public void CheckPinpadResponse(string response, DeviceStatus status)
         {
+			_logger.LogDebug(">>> Entering CheckPinpadResponse(response={Response},status={Status})", response, status);
             switch (response)
             {
                 case "0":
@@ -481,6 +500,7 @@
                     status.AddError("E699", "General error from payment terminal");
                     break;
             }
+			_logger.LogDebug("<<< Exiting CheckPinpadResponse(response={Response},status={Status})", response, status);
         }
 
         // 8 Bytes x 8 bits
@@ -561,6 +581,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -585,6 +606,7 @@
                     mask >>= 1;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 
