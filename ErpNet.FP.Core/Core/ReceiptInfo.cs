@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 ﻿namespace ErpNet.FP.Core
 {
     /// <summary>
@@ -5,6 +6,7 @@
     /// </summary>
     public class ReceiptInfo
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         /// <summary>
         /// The receipt number.
         /// </summary>

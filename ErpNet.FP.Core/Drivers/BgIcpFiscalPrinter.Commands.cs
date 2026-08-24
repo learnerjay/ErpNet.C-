@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the Icp implementation of Isl Bulgaria.
@@ -11,6 +12,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIcpFiscalPrinter" />
     public partial class BgIcpFiscalPrinter : BgFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public override IDictionary<PaymentType, string> GetPaymentTypeMappings()
         {
             var paymentTypeMappings = new Dictionary<PaymentType, string> {
@@ -32,6 +34,9 @@
 
         public override string GetTaxGroupText(TaxGroup taxGroup)
         {
+			_logger.LogDebug(">>> Entering GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
+			_logger.LogDebug("GetTaxGroupText(taxGroup={TaxGroup}): TaxGroup.TaxGroup1 → {Arg1}", taxGroup, TaxGroup.TaxGroup1);
+			_logger.LogDebug("<<< Exiting GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
             return taxGroup switch
             {
                 TaxGroup.TaxGroup1 => "1",
@@ -129,17 +134,22 @@
 
         public virtual DeviceStatus FullPayment()
         {
+			_logger.LogDebug(">>> Entering FullPayment()");
             var (_, status) = Request("490");//"4902");
+			_logger.LogDebug("<<< Exiting FullPayment()");
             return status;
         }
 
         public virtual void AbortReceipt()
         {
+			_logger.LogDebug(">>> Entering AbortReceipt()");
             Request("450");
+			_logger.LogDebug("<<< Exiting AbortReceipt()");
         }
 
         public virtual (System.DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogDebug(">>> Entering GetDateTime(DeviceStatus={DeviceStatus})", DeviceStatus);
             var (dateTimeResponse, deviceStatus) = Request("F3");
             if (!deviceStatus.Ok)
             {
@@ -158,6 +168,7 @@
             {
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime(DeviceStatus={DeviceStatus})", DeviceStatus);
                 return (null, deviceStatus);
             }
         }
@@ -238,6 +249,9 @@
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "0",
@@ -294,6 +308,7 @@
 
         protected static string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogDebug(">>> Entering FormatPeriodReportDate(date={Date})", date);
             return date.ToString("ddMMyyyy", CultureInfo.InvariantCulture);
         }
 
@@ -305,6 +320,7 @@
         /// </summary>
         protected virtual bool IsLongRunningRequest(byte[]? data)
         {
+			_logger.LogDebug(">>> Entering IsLongRunningRequest(data={Data})", data);
             if (data == null || data.Length < CommandPrintFMReportByDate.Length)
             {
                 return false;
@@ -318,11 +334,13 @@
                 }
             }
 
+			_logger.LogDebug("<<< Exiting IsLongRunningRequest(data={Data})", data);
             return true;
         }
 
         protected static string IcpDecimal(decimal value, int length = 10, int digitsAfterPoint = 2)
         {
+			_logger.LogDebug(">>> Entering IcpDecimal(value={Value},length={Length},digitsAfterPoint={DigitsAfterPoint})", value, length, digitsAfterPoint);
             return ((int)Math.Round(value * 10.IntPow(digitsAfterPoint), 0, MidpointRounding.AwayFromZero)).ToString($"D{length}");
         }
 

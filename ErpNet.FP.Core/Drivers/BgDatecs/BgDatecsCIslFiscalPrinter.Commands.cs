@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
 
     /// <summary>
@@ -12,6 +13,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDatecsCIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             CommandDatecsOpenReversalReceipt = 0x2e;
 
@@ -69,6 +71,9 @@
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "0",
@@ -275,6 +280,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -288,11 +294,13 @@
                 if (i == 3)
                 {
                     var switchData = new List<string>();
+					_logger.LogDebug("ParseStatus(status={Status}): switchData → {SwitchData}", status, switchData);
                     // Skip bit 7
                     for (var j = 0; j < 7; j++)
                     {
                         mask >>= 1;
                         var switchState = ((mask & b) != 0) ? "ON" : "OFF";
+						_logger.LogDebug("ParseStatus(status={Status}): switchState → {SwitchState}", status, switchState);
                         switchData.Add($"SW{7 - j}={switchState}");
                     }
                     deviceStatus.AddInfo(string.Join(", ", switchData));
@@ -315,6 +323,7 @@
                     }
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 
