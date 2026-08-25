@@ -20,10 +20,12 @@
 
         public override IChannel OpenChannel(string address)
         {
+			Log.Debug(">>> Entering OpenChannel(address={Address})", address);
             if (openedChannels.TryGetValue(address, out Channel? channel))
             {
                 if (channel == null)
                 {
+					Log.Warning("Throwing TimeoutException from OpenChannel(address={Address})", address);
                     throw new TimeoutException("disabled due to timeout");
                 }
                 return channel;
@@ -35,19 +37,26 @@
                     var (hostName, port) = ParseAddress(address);
                     channel = new Channel(hostName, port);
                     openedChannels.Add(address, channel);
+					Log.Debug("OpenChannel(address={Address}): channel → {Channel}", address, channel);
+					Log.Debug(">>> Entering Channel(hostName={HostName},port={Port})", hostName, port);
+					Log.Information("Channel(hostName={HostName},port={Port}): Port → {Port1}", hostName, port, Port);
                     return channel;
                 }
                 catch (TimeoutException)
                 {
+					Log.Error("Exception in OpenChannel(address={Address}): {Arg1}", address, TimeoutException.getMessage());
                     openedChannels.Add(address, null);
                     throw;
                 }
             }
+			Log.Debug("<<< Exiting OpenChannel(address={Address})", address);
         }
 
         public override void Drop(IChannel channel)
         {
+			Log.Debug(">>> Entering Drop(channel={Channel})", channel);
             ((Channel)channel).Close();
+			Log.Debug("<<< Exiting Drop(channel={Channel})", channel);
         }
 
         protected (string, int) ParseAddress(string address)
@@ -79,26 +88,35 @@
 
             protected NetworkStream ConnectAndGetStream()
             {
+				Log.Debug(">>> Entering ConnectAndGetStream()");
+				var __logStart = System.Diagnostics.Stopwatch.StartNew();
                 var task = tcpClient.ConnectAsync(HostName, Port);
                 if (task.Wait(Math.Max(200, tcpClient.ReceiveTimeout)))
                 {
                     return tcpClient.GetStream();
                 }
                 var errorMessage = $"Timeout occured while connecting to {HostName}:{Port}";
+				Log.Debug("ConnectAndGetStream(): errorMessage → {ErrorMessage}", errorMessage);
+				Log.Information("ConnectAndGetStream(): external service call took {Arg0} ms", __logStart.ElapsedMilliseconds);
                 Log.Error(errorMessage);
+				Log.Debug("<<< Exiting ConnectAndGetStream()");
                 throw new TimeoutException(errorMessage);
             }
 
             public void Dispose()
             {
+				Log.Debug(">>> Entering Dispose()");
                 Close();
+				Log.Debug("<<< Exiting Dispose()");
             }
 
             public void Close()
             {
+				Log.Debug(">>> Entering Close()");
                 tcpClient.Close();
                 // Closing the tcpClient instance does not close the network stream.
                 netStream.Close();
+				Log.Debug("<<< Exiting Close()");
             }
 
             /// <summary>
@@ -107,31 +125,40 @@
             /// <returns>The data which was read.</returns>
             public byte[] Read()
             {
+				Log.Debug(">>> Entering Read()");
                 var buffer = new byte[tcpClient.ReceiveBufferSize];
                 var task = netStream.ReadAsync(buffer, 0, buffer.Length);
+				Log.Debug("Read(): task → {Task}", task);
                 if (task.Wait(netStream.ReadTimeout))
                 {
                     var result = new byte[task.Result];
+					Log.Debug("Read(): result → {Result}", result);
                     Array.Copy(buffer, result, task.Result);
                     return result;
                 }
                 var errorMessage = $"Timeout occured while reading from tcp connection {HostName}:{Port}";
+				Log.Debug("Read(): errorMessage → {ErrorMessage}", errorMessage);
                 Log.Error(errorMessage);
+				Log.Debug("<<< Exiting Read()");
                 throw new TimeoutException(errorMessage);
             }
 
             private void Reconnect()
             {
+				Log.Debug(">>> Entering Reconnect()");
                 try
                 {
                     Close();
                 }
                 finally
                 {
+					Log.Debug("<<< Exiting Reconnect()");
+					Log.Debug("Reconnect(): netStream → {NetStream}", netStream);
                     // Closing TcpClient disposes instance
                     tcpClient = new TcpClient();
                     netStream = ConnectAndGetStream();
                 }
+				Log.Debug("Reconnect(): tcpClient → {TcpClient}", tcpClient);
             }
 
             /// <summary>
@@ -140,6 +167,7 @@
             /// <param name="data">The data to write.</param>
             public void Write(byte[] data)
             {
+				Log.Debug(">>> Entering Write(data={Data})", data);
                 if (!tcpClient.Connected)
                 {
                     try
@@ -149,6 +177,7 @@
                     catch (Exception inner)
                     {
                         var errorMessage = $"Cannot reconnect to {HostName}:{Port}";
+						Log.Debug("Write(data={Data}): errorMessage → {ErrorMessage}", data, errorMessage);
                         Log.Error(errorMessage);
                         throw new TimeoutException(errorMessage, inner);
                     }
@@ -157,6 +186,7 @@
                 while (bytesToWrite > 0)
                 {
                     var writeSize = Math.Min(bytesToWrite, tcpClient.SendBufferSize);
+					Log.Debug("Write(data={Data}): writeSize → {WriteSize}", data, writeSize);
                     var task = netStream.WriteAsync(
                         data,
                         data.Length - bytesToWrite,
@@ -173,6 +203,7 @@
                         throw new TimeoutException(errorMessage);
                     }
                 }
+				Log.Debug("<<< Exiting Write(data={Data})", data);
             }
         }
 

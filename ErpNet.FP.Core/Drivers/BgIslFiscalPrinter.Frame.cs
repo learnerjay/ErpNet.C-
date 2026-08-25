@@ -27,6 +27,7 @@
 
         protected virtual byte[] UInt16To4Bytes(UInt16 word)
         {
+			Log.Debug(">>> Entering UInt16To4Bytes(word={Word})", word);
             return new byte[]{
                 (byte)((word >> 12 & 0x0f) + 0x30),
                 (byte)((word >> 8 & 0x0f) + 0x30),
@@ -36,16 +37,19 @@
         }
         protected virtual byte[] ComputeBCC(byte[] fragment)
         {
+			Log.Debug(">>> Entering ComputeBCC(fragment={Fragment})", fragment);
             UInt16 bccSum = 0;
             foreach (byte b in fragment)
             {
                 bccSum += b;
             }
+			Log.Debug("<<< Exiting ComputeBCC(fragment={Fragment})", fragment);
             return UInt16To4Bytes(bccSum);
         }
 
         protected virtual byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			Log.Debug(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -66,20 +70,25 @@
             frame.AddRange(ComputeBCC(frame.Skip(1).ToArray()));
             frame.Add(MarkerTerminator);
 
+			Log.Debug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
         protected virtual byte[]? RawRequest(byte command, byte[]? data)
         {
+			Log.Debug(">>> Entering RawRequest(command={Command},data={Data})", command, data);
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
             var beginTime = DateTime.Now;
+			Log.Debug("RawRequest(command={Command},data={Data}): deviceDescriptor → {DeviceDescriptor}", command, data, deviceDescriptor);
 
             FrameSequenceNumber++;
             if (FrameSequenceNumber > MaxSequenceNumber)
             {
                 FrameSequenceNumber = 0;
+				Log.Debug("RawRequest(command={Command},data={Data}): FrameSequenceNumber → {FrameSequenceNumber}", command, data, FrameSequenceNumber);
             }
             var request = BuildHostFrame(command, data);
+			Log.Debug("RawRequest(command={Command},data={Data}): request → {Request}", command, data, request);
             for (var w = 0; w < MaxWriteRetries; w++)
             {
                 // Write request frame
@@ -100,7 +109,9 @@
 
                 // Read response frames.
                 var currentFrame = new List<byte>();
+				Log.Debug("RawRequest(command={Command},data={Data}): currentFrame → {CurrentFrame}", command, data, currentFrame);
                 var maxReadRetries = IsLongRunningCommand(command) ? MaxReadRetriesLongRunning : MaxReadRetries;
+				Log.Debug("RawRequest(command={Command},data={Data}): maxReadRetries → {MaxReadRetries}", command, data, maxReadRetries);
                 for (var r = 0; r < maxReadRetries; r++)
                 {
                     byte[] buffer;
@@ -120,6 +131,7 @@
 
                     // Parse frames
                     var readFrames = new List<List<byte>>();
+					Log.Debug("RawRequest(command={Command},data={Data}): readFrames → {ReadFrames}", command, data, readFrames);
                     foreach (var b in buffer)
                     {
                         currentFrame.Add(b);
@@ -167,10 +179,12 @@
                     }
                     if (buffer.Count() > 0 && buffer[0] == 0)
                     {
+						Log.Warning("Throwing InvalidResponseException from RawRequest(command={Command},data={Data})", command, data);
                         throw new InvalidResponseException("The response is invalid. Probably the communication speed not match or the device is not a fiscal device!");
                     }
                 }
             }
+			Log.Debug("<<< Exiting RawRequest(command={Command},data={Data})", command, data);
             return null;
         }
 
@@ -218,14 +232,18 @@
 
         public override DeviceStatusWithRawResponse RawRequest(RequestFrame requestFrame)
         {
+			Log.Debug(">>> Entering RawRequest(requestFrame={RequestFrame})", requestFrame);
             if (requestFrame.RawRequest.Length == 0)
             {
                 var deviceStatus = new DeviceStatus();
+				Log.Debug("RawRequest(requestFrame={RequestFrame}): deviceStatus → {DeviceStatus}", requestFrame, deviceStatus);
                 deviceStatus.AddError("E401", "Request length must be at least 1 character");
                 return new DeviceStatusWithRawResponse(deviceStatus);
             }
             var cmd = PrinterEncoding.GetBytes(requestFrame.RawRequest.Substring(0, 1))[0];
+			Log.Debug("RawRequest(requestFrame={RequestFrame}): cmd → {Cmd}", requestFrame, cmd);
             var data = requestFrame.RawRequest.Substring(1);
+			Log.Debug("RawRequest(requestFrame={RequestFrame}): data → {Data}", requestFrame, data);
             var (rawResponse, status) = Request(cmd, data);
             return new DeviceStatusWithRawResponse(status) { RawResponse = rawResponse };
         }

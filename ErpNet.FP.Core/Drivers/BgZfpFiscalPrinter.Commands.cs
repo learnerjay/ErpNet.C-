@@ -3,9 +3,11 @@
     using System;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     public partial class BgZfpFiscalPrinter : BgFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             CommandReadFDNumbers = 0x60,
             CommandGetStatus = 0x20,
@@ -82,6 +84,7 @@
 
         public virtual (DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogDebug(">>> Entering GetDateTime(DateTime={DateTime},DeviceStatus={DeviceStatus})", DateTime, DeviceStatus);
             var (dateTimeResponse, deviceStatus) = Request(CommandGetDateTime);
             if (!deviceStatus.Ok)
             {
@@ -98,8 +101,10 @@
             }
             catch
             {
+				_logger.LogError("Exception in GetDateTime(DateTime={DateTime},DeviceStatus={DeviceStatus}): {Arg2}", DateTime, DeviceStatus, ex.Message);
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime(DateTime={DateTime},DeviceStatus={DeviceStatus})", DateTime, DeviceStatus);
                 return (null, deviceStatus);
             }
         }
@@ -331,6 +336,7 @@
 
         protected virtual string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogDebug(">>> Entering FormatPeriodReportDate(date={Date})", date);
             return date.ToString("ddMMyy", CultureInfo.InvariantCulture);
         }
 
@@ -340,6 +346,7 @@
         /// </summary>
         protected virtual bool IsLongRunningCommand(byte command)
         {
+			_logger.LogDebug(">>> Entering IsLongRunningCommand(command={Command})", command);
             return command == CommandPrintDetailedFMReportByDate
                 || command == CommandPrintBriefFMReportByDate;
         }
