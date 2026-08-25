@@ -1,10 +1,12 @@
-﻿namespace ErpNet.FP.Core
+﻿using Microsoft.Extensions.Logging;
+namespace ErpNet.FP.Core
 {
     /// <summary>
     /// Information returned after printing receipt.
     /// </summary>
     public class ReceiptInfo
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         /// <summary>
         /// The receipt number.
         /// </summary>

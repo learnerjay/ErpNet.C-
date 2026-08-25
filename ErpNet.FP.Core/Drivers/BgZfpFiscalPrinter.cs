@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using ErpNet.FP.Core.Configuration;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the Zfp implementation.
@@ -11,6 +12,7 @@
     /// <seealso cref="ErpNet.FP.Core.Drivers.BgFiscalPrinter" />
     public partial class BgZfpFiscalPrinter : BgFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public BgZfpFiscalPrinter(
             IChannel channel, 
             ServiceOptions serviceOptions, 
@@ -19,6 +21,9 @@
 
         public override string GetTaxGroupText(TaxGroup taxGroup)
         {
+			_logger.LogDebug(">>> Entering GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
+			_logger.LogDebug("GetTaxGroupText(taxGroup={TaxGroup}): TaxGroup.TaxGroup1 → {Arg1}", taxGroup, TaxGroup.TaxGroup1);
+			_logger.LogDebug("<<< Exiting GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
             return taxGroup switch
             {
                 TaxGroup.TaxGroup1 => "А",
@@ -54,47 +59,61 @@
 
         public override DeviceStatusWithDateTime CheckStatus()
         {
+			_logger.LogDebug(">>> Entering CheckStatus()");
             var (dateTime, status) = GetDateTime();
             var statusEx = new DeviceStatusWithDateTime(status);
+			_logger.LogDebug("CheckStatus(): statusEx → {StatusEx}", statusEx);
             if (dateTime.HasValue)
             {
                 statusEx.DeviceDateTime = dateTime.Value;
+				_logger.LogDebug("CheckStatus(): statusEx.DeviceDateTime → {Arg0}", statusEx.DeviceDateTime);
             }
             else
             {
                 statusEx.AddInfo("Error occured while reading current status");
                 statusEx.AddError("E409", "Cannot read current date and time");
             }
+			_logger.LogDebug("<<< Exiting CheckStatus()");
             return statusEx;
         }
 
         public override DeviceStatus SetDateTime(CurrentDateTime currentDateTime)
         {
+			_logger.LogDebug(">>> Entering SetDateTime(currentDateTime={CurrentDateTime})", currentDateTime);
             var (_, status) = SetDeviceDateTime(currentDateTime.DeviceDateTime);
+			_logger.LogDebug("<<< Exiting SetDateTime(currentDateTime={CurrentDateTime})", currentDateTime);
             return status;
         }
 
         public override DeviceStatus PrintMoneyDeposit(TransferAmount transferAmount)
         {
+			_logger.LogDebug(">>> Entering PrintMoneyDeposit(transferAmount={TransferAmount})", transferAmount);
             var (_, status) = MoneyTransfer(transferAmount);
+			_logger.LogDebug("<<< Exiting PrintMoneyDeposit(transferAmount={TransferAmount})", transferAmount);
             return status;
         }
 
         public override DeviceStatus PrintMoneyWithdraw(TransferAmount transferAmount)
         {
+			_logger.LogDebug(">>> Entering PrintMoneyWithdraw(transferAmount={TransferAmount})", transferAmount);
             if (transferAmount.Amount < 0m)
             {
+				_logger.LogWarning("Throwing StandardizedStatusMessageException from PrintMoneyWithdraw(transferAmount={TransferAmount})", transferAmount);
                 throw new StandardizedStatusMessageException("Withdraw amount must be positive number", "E403");
             }
             transferAmount.Amount = -transferAmount.Amount;
+			_logger.LogDebug("PrintMoneyWithdraw(transferAmount={TransferAmount}): transferAmount.Amount → {Arg1}", transferAmount, transferAmount.Amount);
             var (_, status) = MoneyTransfer(transferAmount);
+			_logger.LogDebug("<<< Exiting PrintMoneyWithdraw(transferAmount={TransferAmount})", transferAmount);
             return status;
         }
 
         protected virtual (ReceiptInfo, DeviceStatus) PrintReceiptBody(Receipt receipt)
         {
+			_logger.LogDebug(">>> Entering PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             var receiptInfo = new ReceiptInfo();
 
+			_logger.LogDebug("PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): receiptInfo → {ReceiptInfo1}", ReceiptInfo, DeviceStatus, receiptInfo);
             var (fiscalMemorySerialNumber, deviceStatus) = GetFiscalMemorySerialNumber();
             if (!deviceStatus.Ok)
             {
@@ -102,8 +121,10 @@
             }
 
             receiptInfo.FiscalMemorySerialNumber = fiscalMemorySerialNumber;
+			_logger.LogDebug("PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): receiptInfo.FiscalMemorySerialNumber → {Arg2}", ReceiptInfo, DeviceStatus, receiptInfo.FiscalMemorySerialNumber);
 
             uint itemNumber = 0;
+			_logger.LogDebug("PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): itemNumber → {ItemNumber}", ReceiptInfo, DeviceStatus, itemNumber);
             // Receipt items
             if (receipt.Items != null) foreach (var item in receipt.Items)
                 {
@@ -127,8 +148,10 @@
                         }
                         catch (StandardizedStatusMessageException e)
                         {
+							_logger.LogError("Exception in PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): {Arg2}", ReceiptInfo, DeviceStatus, e.Message);
                             deviceStatus = new DeviceStatus();
                             deviceStatus.AddError(e.Code, e.Message);
+							_logger.LogDebug("PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): deviceStatus → {DeviceStatus1}", ReceiptInfo, DeviceStatus, deviceStatus);
                         }
                     }
                     if (!deviceStatus.Ok)
@@ -212,11 +235,13 @@
                 }
             }
 
+			_logger.LogDebug("<<< Exiting PrintReceiptBody(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             return GetLastReceiptInfo();
         }
 
         public override (ReceiptInfo, DeviceStatus) PrintReversalReceipt(ReversalReceipt reversalReceipt)
         {
+			_logger.LogDebug(">>> Entering PrintReversalReceipt(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             // Abort all unfinished or erroneus receipts
             AbortReceipt();
 
@@ -244,11 +269,13 @@
                 deviceStatus.AddInfo($"Error occured while printing receipt items");
             }
 
+			_logger.LogDebug("<<< Exiting PrintReversalReceipt(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             return (receiptInfo, deviceStatus);
         } 
 
         public override (ReceiptInfo, DeviceStatus) PrintReceipt(Receipt receipt)
         {
+			_logger.LogDebug(">>> Entering PrintReceipt(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             // Abort all unfinished or erroneus receipts
             AbortReceipt();
 
@@ -273,11 +300,13 @@
                 deviceStatus.AddInfo($"Error occured while printing receipt items");
             }
 
+			_logger.LogDebug("<<< Exiting PrintReceipt(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             return (receiptInfo, deviceStatus);
         }
 
         protected virtual (ReceiptInfo, DeviceStatus) GetLastReceiptInfo()
         {
+			_logger.LogDebug(">>> Entering GetLastReceiptInfo(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
             // QR Code Data Format: <FM Number>*<Receipt Number>*<Receipt Date>*<Receipt Hour>*<Receipt Amount>
             // 50163145*000002*2020-01-28*15:29:00*30.00
             var (qrCodeData, deviceStatus) = GetLastReceiptQRCodeData();
@@ -288,6 +317,7 @@
             }
 
             var qrCodeFields = qrCodeData.Split('*');
+			_logger.LogDebug("GetLastReceiptInfo(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): qrCodeFields → {QrCodeFields}", ReceiptInfo, DeviceStatus, qrCodeFields);
             decimal receiptAmount;
             try
             {
@@ -295,6 +325,7 @@
             }
             catch
             {
+				_logger.LogError("Exception in GetLastReceiptInfo(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): {Arg2}", ReceiptInfo, DeviceStatus, e.Message);
                 deviceStatus.AddInfo($"Error occurred while parsing last receipt QR code data (receipt amount)");
                 return (new ReceiptInfo(), deviceStatus);
             }
@@ -305,6 +336,7 @@
                     $"{qrCodeFields[2]} {qrCodeFields[3]}"),
                     "yyyy-MM-dd HH:mm:ss",
                     CultureInfo.InvariantCulture);
+					_logger.LogDebug("GetLastReceiptInfo(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus}): receiptDateTime → {ReceiptDateTime}", ReceiptInfo, DeviceStatus, receiptDateTime);
             }
             catch
             {
@@ -316,6 +348,7 @@
             {
                 deviceStatus.AddInfo($"Error occurred while reading last receipt number");
                 deviceStatus.AddError("E409", $"Last receipt number is empty");
+			_logger.LogDebug("<<< Exiting GetLastReceiptInfo(ReceiptInfo={ReceiptInfo},DeviceStatus={DeviceStatus})", ReceiptInfo, DeviceStatus);
                 return (new ReceiptInfo(), deviceStatus);
             }
             return (new ReceiptInfo
@@ -329,9 +362,12 @@
 
         public override DeviceStatusWithCashAmount Cash(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering Cash(credentials=<redacted>)");
             var (response, status) = Request(CommandReadDailyAvailableAmounts, "0");
             var statusEx = new DeviceStatusWithCashAmount(status);
+			_logger.LogDebug("Cash(credentials=<redacted>): statusEx → {StatusEx}", statusEx);
             var commaFields = response.Split(';');
+			_logger.LogDebug("Cash(credentials=<redacted>): commaFields → {CommaFields}", commaFields);
             if (commaFields.Length < 3)
             {
                 statusEx.AddInfo("Error occured while reading cash amount");
@@ -340,6 +376,7 @@
             else
             {
                 var amountString = commaFields[1].Trim();
+				_logger.LogDebug("Cash(credentials=<redacted>): amountString → {AmountString}", amountString);
                 if (amountString.Contains("."))
                 {
                     statusEx.Amount = decimal.Parse(amountString, CultureInfo.InvariantCulture);
@@ -349,41 +386,52 @@
                     statusEx.Amount = decimal.Parse(amountString, CultureInfo.InvariantCulture) / 100m;
                 }
             }
+			_logger.LogDebug("<<< Exiting Cash(credentials=<redacted>)");
             return statusEx;
         }
 
         public override DeviceStatus PrintZReport(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering PrintZReport(credentials=<redacted>)");
             var (_, status) = PrintDailyReport(true);
+			_logger.LogDebug("<<< Exiting PrintZReport(credentials=<redacted>)");
             return status;
         }
 
         public override DeviceStatus PrintXReport(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering PrintXReport(credentials=<redacted>)");
             var (_, status) = PrintDailyReport(false);
+			_logger.LogDebug("<<< Exiting PrintXReport(credentials=<redacted>)");
             return status;
         }
 
         public override DeviceStatus PrintPeriodReport(PeriodReport periodReport)
         {
+			_logger.LogDebug(">>> Entering PrintPeriodReport(periodReport={PeriodReport})", periodReport);
             var (_, status) = PrintPeriodReport(
                 periodReport.Type,
                 periodReport.StartDate,
                 periodReport.EndDate);
 
+			_logger.LogDebug("<<< Exiting PrintPeriodReport(periodReport={PeriodReport})", periodReport);
             return status;
         }
 
         public override DeviceStatus PrintDuplicate(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering PrintDuplicate(credentials=<redacted>)");
             var (_, status) = Request(CommandPrintLastReceiptDuplicate);
+			_logger.LogDebug("<<< Exiting PrintDuplicate(credentials=<redacted>)");
             return status;
         }
 
         public override DeviceStatusWithDateTime Reset(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering Reset(credentials=<redacted>)");
             AbortReceipt();
             FullPaymentAndCloseReceipt();
+			_logger.LogDebug("<<< Exiting Reset(credentials=<redacted>)");
             return CheckStatus();
         }
     }

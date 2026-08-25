@@ -6,6 +6,7 @@
     using System.Text;
     using ErpNet.FP.Core.Configuration;
     using Newtonsoft.Json;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Daisy Bulgaria.
@@ -13,6 +14,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDaisyIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             DaisyCommandGetDeviceConstants          = 0x80,
             DaisyCommandAbortFiscalReceipt          = 0x82,
@@ -157,6 +159,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -169,6 +172,7 @@
                 if (i == 3)
                 {
                     byte errorCode = (byte)(status[i] & 0b01111111);
+					_logger.LogDebug("ParseStatus(status={Status}): errorCode → {ErrorCode}", status, errorCode);
                     if (errorCode > 0)
                     {
                         deviceStatus.AddError("E999", $"Error code: {errorCode}, see Daisy Manual");
@@ -192,6 +196,7 @@
                     mask >>= 1;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 
