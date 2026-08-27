@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -11,6 +12,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDatecsPIslFiscalPrinter : BgIslFiscalPrinter
     {
+	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
         protected const byte
             CommandDatecsOpenReversalReceipt = 0x2e;
@@ -19,6 +21,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogDebug(">>> Entering OpenReceipt()");
             var header = string.Join(",",
                 new string[] {
                     String.IsNullOrEmpty(operatorId) ?
@@ -32,6 +35,7 @@
                     "1",
                     uniqueSaleNumber
                 });
+				_logger.LogDebug("<<< Exiting OpenReceipt()");
             return Request(CommandOpenFiscalReceipt, header);
         }
 
@@ -47,6 +51,7 @@
         // Protocol [<L1>][<Lf><L2>]<Tab><TaxCd><[Sign]Price>[*<Qwan>][,Perc|;Abs]
         {
             var itemData = new StringBuilder();
+			_logger.LogDebug("AddItem(): itemData → {ItemData}", itemData);
             if (department <= 0) 
             {
                 itemData
@@ -82,15 +87,19 @@
                         priceModifierType == PriceModifierType.DiscountAmount
                         ? -priceModifierValue : priceModifierValue).ToString("F2", CultureInfo.InvariantCulture));
             }
+			_logger.LogDebug("<<< Exiting AddItem()");
             return Request(CommandFiscalReceiptSale, itemData.ToString());
         }
 
         public override (string, DeviceStatus) GetTaxIdentificationNumber()
         {
+			_logger.LogDebug(">>> Entering GetTaxIdentificationNumber()");
             var (response, deviceStatus) = Request(CommandGetTaxIdentificationNumber);
             var commaFields = response.Split(',');
+			_logger.LogDebug("GetTaxIdentificationNumber(): commaFields → {CommaFields}", commaFields);
             if (commaFields.Length == 2)
             {
+			_logger.LogDebug("<<< Exiting GetTaxIdentificationNumber()");
                 return (commaFields[0].Trim(), deviceStatus);
             }
             return (string.Empty, deviceStatus);
@@ -98,6 +107,9 @@
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "E",
@@ -117,6 +129,7 @@
             string operatorPassword)
         {
             // Protocol:<OpNum>,<Password>,<TillNum>[,<Invoice><InvNum>][,<UNP>],< StType >< DocNo >[,< StUNP >,< StDT >,< StFMIN >][#<StornoReason>]
+			_logger.LogDebug(">>> Entering OpenReversalReceipt()");
             var header = string.Join(",",
                 new string[] {
                     String.IsNullOrEmpty(operatorId) ?
@@ -134,6 +147,7 @@
                     fiscalMemorySerialNumber
                 });
 
+			_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
             return Request(CommandDatecsOpenReversalReceipt, header);
         }
 
@@ -257,6 +271,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -270,11 +285,13 @@
                 if (i == 3)
                 {
                     var switchData = new List<string>();
+					_logger.LogDebug("ParseStatus(status={Status}): switchData → {SwitchData}", status, switchData);
                     // Skip bit 7
                     for (var j = 0; j < 7; j++)
                     {
                         mask >>= 1;
                         var switchState = ((mask & b) != 0) ? "ON" : "OFF";
+						_logger.LogDebug("ParseStatus(status={Status}): switchState → {SwitchState}", status, switchState);
                         switchData.Add($"SW{7 - j}={switchState}");
                     }
                     deviceStatus.AddInfo(string.Join(", ", switchData));
@@ -297,6 +314,7 @@
                     }
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 
