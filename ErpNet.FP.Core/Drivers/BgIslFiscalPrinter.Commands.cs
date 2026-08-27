@@ -3,9 +3,11 @@
     using System;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     public abstract partial class BgIslFiscalPrinter : BgFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             CommandGetStatus = 0x4a,
             CommandGetDeviceInfo = 0x5a,
@@ -42,6 +44,9 @@
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "1",
@@ -156,6 +161,7 @@
 
         public virtual (System.DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogDebug(">>> Entering GetDateTime(DeviceStatus={DeviceStatus})", DeviceStatus);
             var (dateTimeResponse, deviceStatus) = Request(CommandGetDateTime);
             if (!deviceStatus.Ok)
             {
@@ -180,6 +186,7 @@
             {
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime(DeviceStatus={DeviceStatus})", DeviceStatus);
                 return (null, deviceStatus);
             }
         }
@@ -356,6 +363,7 @@
 
         protected virtual string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogDebug(">>> Entering FormatPeriodReportDate(date={Date})", date);
             return date.ToString("ddMMyy", CultureInfo.InvariantCulture);
         }
 
@@ -365,6 +373,7 @@
         /// </summary>
         protected virtual bool IsLongRunningCommand(byte command)
         {
+			_logger.LogDebug(">>> Entering IsLongRunningCommand(command={Command})", command);
             return command == CommandPrintDetailedFMReportByDate
                 || command == CommandPrintShortFMReportByDate;
         }

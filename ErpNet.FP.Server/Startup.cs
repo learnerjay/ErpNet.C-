@@ -24,19 +24,25 @@
 
         public Startup(IConfiguration configuration)
         {
+			Log.Debug(">>> Entering Startup(configuration={Configuration})", configuration);
             Configuration = configuration;
+			Log.Debug("<<< Exiting Startup(configuration={Configuration})", configuration);
+			Log.Information("Startup(configuration={Configuration}): Configuration → {Configuration1}", configuration, Configuration);
 
             _webAccessOptions = Configuration.GetSection("ErpNet.FP:WebAccess").Get<WebAccessOptions>()
                 ?? new WebAccessOptions();
+				Log.Debug("Startup(configuration={Configuration}): _webAccessOptions → {_webAccessOptions}", configuration, _webAccessOptions);
         }
 
         public IConfiguration Configuration { get; }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+			Log.Debug(">>> Entering Configure(app={App},env={Env})", app, env);
             app.UseDefaultFiles();
 
             var customContentProvider = new FileExtensionContentTypeProvider();
+			Log.Debug("Configure(app={App},env={Env}): customContentProvider → {CustomContentProvider}", app, env, customContentProvider);
             customContentProvider.Mappings[".log"] = "text/plain; charset=UTF-8";
 
             app.UseStaticFiles(new StaticFileOptions
@@ -83,10 +89,12 @@
             {
                 endpoints.MapControllers();
             });
+			Log.Debug("<<< Exiting Configure(app={App},env={Env})", app, env);
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
+			Log.Debug(">>> Entering ConfigureServices(services={Services})", services);
             services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog(dispose: true));
 
             services.ConfigureWritable<ServiceOptions>(Configuration.GetSection("ErpNet.FP"));
@@ -118,6 +126,7 @@
             });
 
             services.AddHostedService<KeepAliveHostedService>();
+			Log.Debug("<<< Exiting ConfigureServices(services={Services})", services);
         }
     }
 }
