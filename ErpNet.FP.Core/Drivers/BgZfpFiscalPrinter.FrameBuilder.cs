@@ -2,6 +2,7 @@
 {
     using System.IO;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     public partial class BgZfpFiscalPrinter
     {
@@ -11,6 +12,7 @@
         /// </summary>
         protected sealed class FrameBuilder
         {
+        	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
             private readonly MemoryStream _buffer = new();
             private readonly Encoding _encoding;
 
@@ -20,7 +22,9 @@
             /// </summary>
             public FrameBuilder(Encoding encoding)
             {
+				_logger.LogDebug(">>> Entering FrameBuilder(encoding={Encoding})", encoding);
                 _encoding = encoding;
+				_logger.LogDebug("FrameBuilder(encoding={Encoding}): _encoding → {_encoding}", encoding, _encoding);
             }
 
             /// <summary>
@@ -28,9 +32,14 @@
             /// </summary>
             public FrameBuilder Append(string text)
             {
+				_logger.LogDebug(">>> Entering Append(text={Text})", text);
                 var bytes = _encoding.GetBytes(text);
                 _buffer.Write(bytes, 0, bytes.Length);
+				_logger.LogDebug("Append(text={Text}): bytes → {Bytes}", text, bytes);
 
+				_logger.LogDebug("<<< Exiting Append(text={Text})", text);
+				_logger.LogDebug("<<< Exiting Append(c={C})", c);
+				_logger.LogDebug("<<< Exiting Append(b={B})", b);
                 return this;
             }
 
