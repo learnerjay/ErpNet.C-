@@ -19,6 +19,7 @@ namespace ErpNet.FP.Core.Drivers.BgIncotex
             bool autoDetect = true, 
             IDictionary<string, string>? options = null)
         {
+			Log.Debug(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgIncotexIslFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"isl.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -41,16 +42,20 @@ namespace ErpNet.FP.Core.Drivers.BgIncotex
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect, string? rawDeviceConstants = null)
         {
+			Log.Debug(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
             // 2.11 Jan 22 2019 14:00,DB44EEAD,0000,06,IN015013,54015013,284013911622147
             var commaFields = rawDeviceInfo.Split(',');
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants}): commaFields → {CommaFields}", rawDeviceInfo, autoDetect, rawDeviceConstants, commaFields);
             if (commaFields.Length < 7)
             {
+				Log.Warning("Throwing InvalidDeviceInfoException from ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
                 throw new InvalidDeviceInfoException($"rawDeviceInfo must contain 7 comma-separated items for '{DriverName}'");
             }
             var serialNumber = commaFields[4];
@@ -68,8 +73,10 @@ namespace ErpNet.FP.Core.Drivers.BgIncotex
                 return new DeviceInfo();
             }
             var commaConstants = rawDeviceConstants.Split(',');
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants}): commaConstants → {CommaConstants}", rawDeviceInfo, autoDetect, rawDeviceConstants, commaConstants);
             if (commaConstants.Length < 10)
             {
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
                 throw new InvalidDeviceInfoException($"rawDeviceConstants must contain 25 comma-separated items for '{DriverName}'");
             }
             return new DeviceInfo
