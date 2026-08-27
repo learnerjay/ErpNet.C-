@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -11,9 +12,11 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDatecsXIslFiscalPrinter : BgIslFiscalPrinter
     {
+	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
         protected override byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			_logger.LogDebug(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -34,6 +37,7 @@
             frame.AddRange(ComputeBCC(frame.Skip(1).ToArray()));
             frame.Add(MarkerTerminator);
 
+			_logger.LogDebug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
