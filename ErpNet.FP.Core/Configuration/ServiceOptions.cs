@@ -4,12 +4,14 @@
     using System.Collections.Generic;
     using System.Threading;
     using Newtonsoft.Json;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Represents the base configuration for a fiscal printer connection.
     /// </summary>
     public class PrinterConfig
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         /// <summary>
         /// Gets or sets the URI used to connect to the printer (e.g., COM port or network address).
         /// </summary>
@@ -77,6 +79,7 @@
     /// </summary>
     public class ServiceOptions
     {
+    	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         private readonly ReaderWriterLockSlim _rwLock = new();
 
         /// <summary>
@@ -126,12 +129,14 @@
         /// <param name="map">The dictionary of payment types to be updated.</param>
         public void RemapPaymentTypes(string serialNumber, Dictionary<PaymentType, string> map) 
         {
+			_logger.LogDebug(">>> Entering RemapPaymentTypes(serialNumber={SerialNumber},map={Map})", serialNumber, map);
             _rwLock.EnterReadLock();
             if (PrintersProperties.TryGetValue(serialNumber, out PrinterProperties? printerProperties))
             {
                 foreach (PaymentType pmt in (PaymentType[])Enum.GetValues(typeof(PaymentType)))
                 {
                     var serializedKey = JsonConvert.SerializeObject(pmt).Trim('"');
+					_logger.LogDebug("RemapPaymentTypes(serialNumber={SerialNumber},map={Map}): serializedKey → {SerializedKey}", serialNumber, map, serializedKey);
                     if (printerProperties.PaymentTypeMappings.TryGetValue(serializedKey, out var newValue))
                     {
                         if (!string.IsNullOrEmpty(newValue)) {
@@ -141,6 +146,7 @@
                 }
             }
             _rwLock.ExitReadLock();
+			_logger.LogDebug("<<< Exiting RemapPaymentTypes(serialNumber={SerialNumber},map={Map})", serialNumber, map);
         }
 
         /// <summary>
@@ -150,6 +156,7 @@
         /// <param name="info">The device info object to reconfigure.</param>
         public void ReconfigurePrinterConstants(DeviceInfo info)
         {
+			_logger.LogDebug(">>> Entering ReconfigurePrinterConstants(info={Info})", info);
             _rwLock.EnterReadLock();
             try
             {
@@ -157,6 +164,7 @@
                 {
                     printerProperties = new PrinterProperties();
                     PrintersProperties.Add(info.SerialNumber, printerProperties);
+					_logger.LogDebug("ReconfigurePrinterConstants(info={Info}): printerProperties → {PrinterProperties}", info, printerProperties);
                 }
 
                 if (printerProperties.PrinterConstants.TryGetValue(
@@ -168,6 +176,7 @@
                         if (value > 0)
                         {
                             info.CommentTextMaxLength = value;
+							_logger.LogDebug("ReconfigurePrinterConstants(info={Info}): info.CommentTextMaxLength → {Arg1}", info, info.CommentTextMaxLength);
                         }
                     }
                 }
@@ -181,6 +190,7 @@
                         if (value > 0)
                         {
                             info.ItemTextMaxLength = value;
+							_logger.LogDebug("ReconfigurePrinterConstants(info={Info}): info.ItemTextMaxLength → {Arg1}", info, info.ItemTextMaxLength);
                         }
                     }
                 }
@@ -189,6 +199,7 @@
             {
                 _rwLock.ExitReadLock();
             }            
+			_logger.LogDebug("<<< Exiting ReconfigurePrinterConstants(info={Info})", info);
         }
 
         /// <summary>
@@ -199,6 +210,7 @@
         /// <param name="key">The option key.</param>
         public string? GetPrinterOption(string serialNumber, string key)
         {
+			_logger.LogDebug(">>> Entering GetPrinterOption(serialNumber={SerialNumber},key={Key})", serialNumber, key);
             _rwLock.EnterReadLock();
             try
             {
@@ -206,6 +218,7 @@
                     && printerProperties.PrinterOptions.TryGetValue(key, out var value)
                     && !string.IsNullOrEmpty(value))
                 {
+				_logger.LogDebug("<<< Exiting GetPrinterOption(serialNumber={SerialNumber},key={Key})", serialNumber, key);
                     return value;
                 }
                 return null;
@@ -223,6 +236,7 @@
         /// <param name="info">The device info object to reconfigure.</param>
         public void ReconfigurePrinterOptions(DeviceInfo info)
         {
+			_logger.LogDebug(">>> Entering ReconfigurePrinterOptions(info={Info})", info);
             _rwLock.EnterReadLock();
             try
             {
@@ -230,6 +244,7 @@
                 {
                     printerProperties = new PrinterProperties();
                     PrintersProperties.Add(info.SerialNumber, printerProperties);
+					_logger.LogDebug("ReconfigurePrinterOptions(info={Info}): printerProperties → {PrinterProperties}", info, printerProperties);
                 }
                  
                 if (printerProperties.PrinterOptions.TryGetValue(
@@ -239,6 +254,7 @@
                     if (bool.TryParse(supportPaymentTerminal, out bool value))
                     {
                         info.SupportPaymentTerminal = value;
+						_logger.LogDebug("ReconfigurePrinterOptions(info={Info}): info.SupportPaymentTerminal → {Arg1}", info, info.SupportPaymentTerminal);
                     }
                 }
                 else
@@ -253,6 +269,7 @@
                     if (bool.TryParse(usePaymentTerminal, out bool value))
                     {
                         info.UsePaymentTerminal = value;
+						_logger.LogDebug("ReconfigurePrinterOptions(info={Info}): info.UsePaymentTerminal → {Arg1}", info, info.UsePaymentTerminal);
                     }
                 }
                 else
@@ -265,6 +282,7 @@
             {
                 _rwLock.ExitReadLock();
             }
+			_logger.LogDebug("<<< Exiting ReconfigurePrinterOptions(info={Info})", info);
         }
     }
 }

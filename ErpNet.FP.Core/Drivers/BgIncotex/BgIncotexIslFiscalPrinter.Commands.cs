@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Incotex.
@@ -11,6 +12,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgIncotexIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             IncotexCommandGetDeviceConstants = 0x80,
             IncotexCommandAbortFiscalReceipt = 0x82;
@@ -18,20 +20,25 @@
 
         public override (string, DeviceStatus) AbortReceipt()
         {
+			_logger.LogDebug(">>> Entering AbortReceipt()");
             return Request(IncotexCommandAbortFiscalReceipt);
         }
 
         public (string, DeviceStatus) GetRawDeviceConstants()
         {
+			_logger.LogDebug(">>> Entering GetRawDeviceConstants()");
             return Request(IncotexCommandGetDeviceConstants);
         }
 
         public override (string, DeviceStatus) GetTaxIdentificationNumber()
         {
+			_logger.LogDebug(">>> Entering GetTaxIdentificationNumber()");
             var (response, deviceStatus) = Request(CommandGetTaxIdentificationNumber);
             var commaFields = response.Split(',');
+			_logger.LogDebug("GetTaxIdentificationNumber(): commaFields → {CommaFields}", commaFields);
             if (commaFields.Length == 2)
             {
+			_logger.LogDebug("<<< Exiting GetTaxIdentificationNumber()");
                 return (commaFields[1].Trim(), deviceStatus);
             }
             return (string.Empty, deviceStatus);
@@ -39,6 +46,7 @@
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             switch (reversalReason)
             {
                 case ReversalReason.Refund:
@@ -47,14 +55,17 @@
                     return "V";
                 case ReversalReason.OperatorError:
                 default:
+					_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
                     return "R";
             }
         }
 
         public override (string, DeviceStatus) GetFiscalMemorySerialNumber()
         {
+			_logger.LogDebug(">>> Entering GetFiscalMemorySerialNumber()");
             var (rawDeviceInfo, deviceStatus) = GetRawDeviceInfo();
             var fields = rawDeviceInfo.Split(',');
+			_logger.LogDebug("GetFiscalMemorySerialNumber(): fields → {Fields}", fields);
             if (fields != null && fields.Length > 5)
             {
                 return (fields[5], deviceStatus);
@@ -63,6 +74,7 @@
             {
                 deviceStatus.AddInfo($"Error occured while reading device info");
                 deviceStatus.AddError("E409", "Wrong number of fields");
+				_logger.LogDebug("<<< Exiting GetFiscalMemorySerialNumber()");
                 return (string.Empty, deviceStatus);
             }
         }
@@ -72,6 +84,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogDebug(">>> Entering OpenReceipt()");
             var header = string.Join(",",
                 new string[] {
                     String.IsNullOrEmpty(operatorId) ?
@@ -81,6 +94,7 @@
                     uniqueSaleNumber,
                     "0"
                 });
+				_logger.LogDebug("<<< Exiting OpenReceipt()");
             return Request(CommandOpenFiscalReceipt, header);
         }
 
@@ -94,6 +108,7 @@
             string operatorPassword)
         {
             // Protocol: <OpNum>,<UNP>,<RevDocNo>[,<F1>[<F2><RevInvoiceNo>,<dd-mm-yy hh:mm:ss>,origDevDMNo]]
+			_logger.LogDebug(">>> Entering OpenReversalReceipt()");
             var headerData = new StringBuilder()
                 .Append(
                     String.IsNullOrEmpty(operatorId) ?
@@ -114,6 +129,7 @@
                 .Append(',')
                 .Append(fiscalMemorySerialNumber);
 
+			_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
             return Request(CommandOpenFiscalReceipt, headerData.ToString());
         }
 
@@ -127,7 +143,9 @@
             PriceModifierType priceModifierType = PriceModifierType.None,
             int ItemCode = 999)
         {
+			_logger.LogDebug(">>> Entering AddItem()");
             var itemData = new StringBuilder();
+			_logger.LogDebug("AddItem(): itemData → {ItemData}", itemData);
             if (department <= 0) 
             {
                 itemData
@@ -163,16 +181,19 @@
                         priceModifierType == PriceModifierType.DiscountAmount
                         ? -priceModifierValue : priceModifierValue).ToString("F2", CultureInfo.InvariantCulture));
             }
+			_logger.LogDebug("<<< Exiting AddItem()");
             return Request(CommandFiscalReceiptSale, itemData.ToString());
         }
 
         public override (string, DeviceStatus) FullPayment()
         {
+			_logger.LogDebug(">>> Entering FullPayment()");
             return Request(CommandFiscalReceiptTotal, "\t");
         }
 
         public override (string, DeviceStatus) GetRawDeviceInfo()
         {
+			_logger.LogDebug(">>> Entering GetRawDeviceInfo()");
             return Request(CommandGetDeviceInfo, "1");
         }
 
@@ -300,6 +321,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -312,6 +334,7 @@
                 if (i == 3)
                 {
                     byte errorCode = (byte)(status[i] & 0b01111111);
+					_logger.LogDebug("ParseStatus(status={Status}): errorCode → {ErrorCode}", status, errorCode);
                     if (errorCode > 0)
                     {
                         deviceStatus.AddError("E999", $"Error code: {errorCode}, see Incotex Manual");
@@ -335,11 +358,13 @@
                     mask >>= 1;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 
         public override (decimal?, DeviceStatus) GetReceiptAmount()
         {
+			_logger.LogDebug(">>> Entering GetReceiptAmount()");
             decimal? receiptAmount = null;
 
             var (receiptStatusResponse, deviceStatus) = Request(CommandGetReceiptStatus, "T");
@@ -350,6 +375,7 @@
             }
 
             var fields = receiptStatusResponse.Split(',');
+			_logger.LogDebug("GetReceiptAmount(): fields → {Fields}", fields);
             if (fields.Length < 4)
             {
                 deviceStatus.AddInfo($"Error occured while parsing last receipt status");
@@ -366,6 +392,7 @@
                     {
                         case '+':
                             receiptAmount = decimal.Parse(amountString.Substring(1), CultureInfo.InvariantCulture) / 100m;
+							_logger.LogDebug("GetReceiptAmount(): receiptAmount → {ReceiptAmount}", receiptAmount);
                             break;
                         case '-':
                             receiptAmount = -decimal.Parse(amountString.Substring(1), CultureInfo.InvariantCulture) / 100m;
@@ -386,9 +413,12 @@
             }
             catch (Exception e)
             {
+				_logger.LogError("Exception in GetReceiptAmount(): {Arg0}", e.Message);
                 deviceStatus = new DeviceStatus();
                 deviceStatus.AddInfo($"Error occured while parsing the amount of last receipt status");
+				_logger.LogDebug("GetReceiptAmount(): deviceStatus → {DeviceStatus}", deviceStatus);
                 deviceStatus.AddError("E409", e.Message);
+			_logger.LogDebug("<<< Exiting GetReceiptAmount()");
                 return (null, deviceStatus);
             }
 

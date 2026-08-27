@@ -1,4 +1,5 @@
-﻿namespace ErpNet.FP.Core.Drivers
+﻿using Microsoft.Extensions.Logging;
+namespace ErpNet.FP.Core.Drivers
 {
     /// <summary>
     /// Fiscal printer using the Zfp implementation of Tremol Bulgaria.
@@ -6,6 +7,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgZfpFiscalPrinter" />
     public partial class BgZfpFiscalPrinter : BgFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         // Begins at 0x30, ends at 0x3f
         // All strings are errors
         protected static readonly (string?, string)[] FiscalDeviceErrors = new (string?, string)[]{
@@ -110,8 +112,10 @@
 
         protected virtual DeviceStatus ParseCommandStatus(byte[] status)
         {
+			_logger.LogDebug(">>> Entering ParseCommandStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             // Byte 0
+			_logger.LogDebug("ParseCommandStatus(status={Status}): deviceStatus → {DeviceStatus}", status, deviceStatus);
             var (errorCode, errorText) = FiscalDeviceErrors[status[0] - 0x30];
             if (errorText.Length > 0 && errorCode != null)
             {
@@ -123,11 +127,13 @@
             {
                 deviceStatus.AddError(errorCode, errorText);
             }
+			_logger.LogDebug("<<< Exiting ParseCommandStatus(status={Status})", status);
             return deviceStatus;
         }
 
         protected virtual DeviceStatus ParseDeviceStatus(byte[] status)
         {
+			_logger.LogDebug(">>> Entering ParseDeviceStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             for (var i = 0; i < status.Length; i++)
             {
@@ -148,11 +154,13 @@
                     mask >>= 1;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseDeviceStatus(status={Status})", status);
             return deviceStatus;
         }
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             if (status != null)
             {
                 switch (status.Length)
@@ -164,6 +172,7 @@
                 }
             }
 
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return new DeviceStatus();
 
             /*
