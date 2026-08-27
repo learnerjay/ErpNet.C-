@@ -16,6 +16,7 @@ namespace ErpNet.FP.Core.Drivers.BgEltrade
             ServiceOptions serviceOptions, 
             bool autoDetect = true, IDictionary<string, string>? options = null)
         {
+			Log.Debug(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgEltradeIslFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"isl.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -34,15 +35,18 @@ namespace ErpNet.FP.Core.Drivers.BgEltrade
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect)
         {
+			Log.Debug(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             var commaFields = rawDeviceInfo.Split(',');
             if (commaFields.Length != 7)
             {
+				Log.Warning("Throwing InvalidDeviceInfoException from ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
                 throw new InvalidDeviceInfoException($"rawDeviceInfo must contain 7 comma-separated items for '{DriverName}'");
             }
             var serialNumber = commaFields[5];
@@ -64,6 +68,7 @@ namespace ErpNet.FP.Core.Drivers.BgEltrade
                 ItemTextMaxLength = 30, // Set by Eltrade protocol
                 OperatorPasswordMaxLength = 8 // Set by Eltrade protocol
             };
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             return info;
         }
 

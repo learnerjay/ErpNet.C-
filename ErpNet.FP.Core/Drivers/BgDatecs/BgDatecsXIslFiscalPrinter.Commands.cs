@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -10,6 +11,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDatecsXIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
            DatecsXCommandOpenStornoDocument = 0x2b,
            // Unlike the classic ISL dialect, which has a separate command per level of detail,
@@ -32,6 +34,9 @@
 
         public override string GetTaxGroupText(TaxGroup taxGroup)
         {
+			_logger.LogDebug(">>> Entering GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
+			_logger.LogDebug("GetTaxGroupText(taxGroup={TaxGroup}): TaxGroup.TaxGroup1 → {Arg1}", taxGroup, TaxGroup.TaxGroup1);
+			_logger.LogDebug("<<< Exiting GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
             return taxGroup switch
             {
                 TaxGroup.TaxGroup1 => "1",
@@ -48,7 +53,9 @@
 
         public override (string, DeviceStatus) SubtotalChangeAmount(Decimal amount)
         {
+			_logger.LogDebug(">>> Entering SubtotalChangeAmount(amount={Amount})", amount);
             // {Print}<SEP>{Display}<SEP>{DiscountType}<SEP>{DiscountValue}<SEP>
+			_logger.LogDebug("<<< Exiting SubtotalChangeAmount(amount={Amount})", amount);
             return Request(CommandSubtotal, string.Join("\t",
                 "1",
                 "0",
@@ -59,14 +66,18 @@
 
         public override (string, DeviceStatus) SetDeviceDateTime(DateTime dateTime)
         {
+			_logger.LogDebug(">>> Entering SetDeviceDateTime(dateTime={DateTime})", dateTime);
             return Request(CommandSetDateTime, dateTime.ToString("dd-MM-yy HH:mm:ss\t", CultureInfo.InvariantCulture));
         }
 
         public override DeviceStatusWithCashAmount Cash(Credentials credentials)
         {
+			_logger.LogDebug(">>> Entering Cash(credentials=<redacted>)");
             var (response, status) = Request(CommandMoneyTransfer, "0\t0\t");
             var statusEx = new DeviceStatusWithCashAmount(status);
+			_logger.LogDebug("Cash(credentials=<redacted>): statusEx → {StatusEx}", statusEx);
             var tabFields = response.Split('\t');
+			_logger.LogDebug("Cash(credentials=<redacted>): tabFields → {TabFields}", tabFields);
             if (tabFields.Length != 5)
             {
                 statusEx.AddInfo("Error occured while reading cash amount");
@@ -84,15 +95,19 @@
                     statusEx.Amount = decimal.Parse(amountString, CultureInfo.InvariantCulture) / 100m;
                 }
             }
+			_logger.LogDebug("<<< Exiting Cash(credentials=<redacted>)");
             return statusEx;
         }
 
         public override (string, DeviceStatus) GetTaxIdentificationNumber()
         {
+			_logger.LogDebug(">>> Entering GetTaxIdentificationNumber()");
             var (response, deviceStatus) = Request(CommandGetTaxIdentificationNumber);
             var commaFields = response.Split('\t');
+			_logger.LogDebug("GetTaxIdentificationNumber(): commaFields → {CommaFields}", commaFields);
             if (commaFields.Length == 2)
             {
+			_logger.LogDebug("<<< Exiting GetTaxIdentificationNumber()");
                 return (commaFields[1].Trim(), deviceStatus);
             }
             return (string.Empty, deviceStatus);
@@ -100,6 +115,7 @@
 
         public override (decimal?, DeviceStatus) GetReceiptAmount()
         {
+			_logger.LogDebug(">>> Entering GetReceiptAmount()");
             decimal? receiptAmount = null;
 
             var (receiptStatusResponse, deviceStatus) = Request(CommandGetReceiptStatus);
@@ -110,6 +126,7 @@
             }
 
             var fields = receiptStatusResponse.Split('\t');
+			_logger.LogDebug("GetReceiptAmount(): fields → {Fields}", fields);
             if (fields.Length < 5)
             {
                 deviceStatus.AddInfo($"Error occured while parsing last receipt status");
@@ -133,9 +150,12 @@
             }
             catch (Exception e)
             {
+				_logger.LogError("Exception in GetReceiptAmount(): {Arg0}", e.Message);
                 deviceStatus = new DeviceStatus();
                 deviceStatus.AddInfo($"Error occured while parsing the amount of last receipt status");
+				_logger.LogDebug("GetReceiptAmount(): deviceStatus → {DeviceStatus}", deviceStatus);
                 deviceStatus.AddError("E409", e.Message);
+			_logger.LogDebug("<<< Exiting GetReceiptAmount()");
                 return (null, deviceStatus);
             }
 
@@ -144,6 +164,7 @@
 
         public override (System.DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogDebug(">>> Entering GetDateTime()");
             var (dateTimeResponse, deviceStatus) = Request(CommandGetDateTime);
             if (!deviceStatus.Ok)
             {
@@ -152,6 +173,7 @@
             }
 
             var fields = dateTimeResponse.Split('\t');
+			_logger.LogDebug("GetDateTime(): fields → {Fields}", fields);
             if (fields.Length < 2)
             {
                 deviceStatus.AddInfo($"Error occured while parsing date and time");
@@ -160,6 +182,7 @@
             }
 
             var fixedDateAndTimeString = fields[1].Replace(" DST", "");
+			_logger.LogDebug("GetDateTime(): fixedDateAndTimeString → {FixedDateAndTimeString}", fixedDateAndTimeString);
 
             try
             {
@@ -170,14 +193,17 @@
             }
             catch
             {
+				_logger.LogError("Exception in GetDateTime(): {Arg0}", e.Message);
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime()");
                 return (null, deviceStatus);
             }
         }
 
         public override (string, DeviceStatus) CloseReceipt()
         {
+			_logger.LogDebug(">>> Entering CloseReceipt()");
             var (response, deviceStatus) = base.CloseReceipt();
             if (deviceStatus.Ok)
                 return (response, deviceStatus);
@@ -185,6 +211,7 @@
             // The status bytes tell the condition of the printer, not the result of the command, and both arrive in the same answer.
             // Error code 0 and a document number therefore mean the receipt is already in the fiscal memory.
             var fields = response.Split('\t');
+			_logger.LogDebug("CloseReceipt(): fields → {Fields}", fields);
             if (fields.Length >= 2 && fields[0] == "0" && !string.IsNullOrWhiteSpace(fields[1]))
                 return (response, new DeviceStatus());
 
@@ -193,12 +220,16 @@
 
         public override (string, DeviceStatus) GetLastDocumentNumber(string closeReceiptResponse)
         {
+			_logger.LogDebug(">>> Entering GetLastDocumentNumber(closeReceiptResponse={CloseReceiptResponse})", closeReceiptResponse);
             var deviceStatus = new DeviceStatus();
             var fields = closeReceiptResponse.Split('\t');
+			_logger.LogDebug("GetLastDocumentNumber(closeReceiptResponse={CloseReceiptResponse}): fields → {Fields}", closeReceiptResponse, fields);
+			_logger.LogDebug("GetLastDocumentNumber(closeReceiptResponse={CloseReceiptResponse}): deviceStatus → {DeviceStatus}", closeReceiptResponse, deviceStatus);
             if (fields.Length < 2)
             {
                 deviceStatus.AddInfo($"Error occured while parsing close receipt response");
                 deviceStatus.AddError("E409", $"Wrong format of close receipt response");
+			_logger.LogDebug("<<< Exiting GetLastDocumentNumber(closeReceiptResponse={CloseReceiptResponse})", closeReceiptResponse);
                 return (string.Empty, deviceStatus);
             }
             return (fields[1], deviceStatus);
@@ -206,7 +237,9 @@
 
         public override (string, DeviceStatus) MoneyTransfer(decimal amount)
         {
+			_logger.LogDebug(">>> Entering MoneyTransfer(amount={Amount})", amount);
             // Protocol: {Type}<SEP>{Amount}<SEP>
+			_logger.LogDebug("<<< Exiting MoneyTransfer(amount={Amount})", amount);
             return Request(CommandMoneyTransfer, string.Join("\t",
                 amount < 0 ? "1" : "0",
                 Math.Abs(amount).ToString("F2", CultureInfo.InvariantCulture),
@@ -223,8 +256,10 @@
             PriceModifierType priceModifierType = PriceModifierType.None,
             int ItemCode = 999)
         {
+			_logger.LogDebug(">>> Entering AddItem()");
             string PriceModifierTypeToProtocolValue()
             {
+				_logger.LogDebug("<<< Exiting AddItem()");
                 return priceModifierType switch
                 {
                     PriceModifierType.None => "0",
@@ -234,6 +269,10 @@
                     PriceModifierType.SurchargeAmount => "3",
                     _ => "",
                 };
+				_logger.LogDebug("AddItem(): PriceModifierType.None → {Arg0}", PriceModifierType.None);
+				_logger.LogDebug("AddItem(): PriceModifierType.DiscountPercent → {Arg0}", PriceModifierType.DiscountPercent);
+				_logger.LogDebug("AddItem(): PriceModifierType.DiscountAmount → {Arg0}", PriceModifierType.DiscountAmount);
+				_logger.LogDebug("AddItem(): PriceModifierType.SurchargePercent → {Arg0}", PriceModifierType.SurchargePercent);
             }
 
             // Protocol: {PluName}<SEP>{TaxCd}<SEP>{Price}<SEP>{Quantity}<SEP>{DiscountType}<SEP>{DiscountValue}<SEP>{Department}<SEP>
@@ -246,11 +285,13 @@
                 priceModifierValue.ToString("F2", CultureInfo.InvariantCulture),
                 department.ToString(),
                 "");
+				_logger.LogDebug("AddItem(): PriceModifierType.SurchargeAmount → {Arg0}", PriceModifierType.SurchargeAmount);
             return Request(CommandFiscalReceiptSale, itemData);
         }
 
         public override (string, DeviceStatus) AddComment(string text)
         {
+			_logger.LogDebug(">>> Entering AddComment(text={Text})", text);
             return Request(
                 CommandFiscalReceiptComment,
                 text.WithMaxLength(Info.CommentTextMaxLength) + "\t"
@@ -259,11 +300,13 @@
 
         public override (string, DeviceStatus) FullPayment()
         {
+			_logger.LogDebug(">>> Entering FullPayment()");
             return Request(CommandFiscalReceiptTotal, "\t\t\t");
         }
 
         public override (string, DeviceStatus) AddPayment(decimal amount, PaymentType paymentType)
         {
+			_logger.LogDebug(">>> Entering AddPayment(amount={Amount},paymentType={PaymentType})", amount, paymentType);
             var paymentTypeText = GetPaymentTypeText(paymentType);
             if (paymentType == PaymentType.Card && DeviceInfo.SupportPaymentTerminal && DeviceInfo.UsePaymentTerminal)
                 paymentTypeText = "2";
@@ -282,6 +325,7 @@
             {
                 // check response for specific error when using pinpad
                 var returnedData = data.Split('\t');
+				_logger.LogDebug("AddPayment(amount={Amount},paymentType={PaymentType}): returnedData → {ReturnedData}", amount, paymentType, returnedData);
                 decimal paysum;
                 if (returnedData[0] == DatecsPinpadErrorUnfinishedTransaction && returnedData.Length > 1 &&
                     decimal.TryParse(returnedData[1], out paysum) && paysum == amount)
@@ -294,6 +338,7 @@
                         // then replace error code of previous command (CommandFiscalReceiptTotal) with NOERROR ("0") code
                         returnedData[0] = "0";
                         data = string.Join("\t", returnedData);
+						_logger.LogDebug("AddPayment(amount={Amount},paymentType={PaymentType}): data → {Data}", amount, paymentType, data);
                     }
                 }
                 else if (returnedData[0] == "0")
@@ -307,11 +352,15 @@
                 }
             }
 
+			_logger.LogDebug("<<< Exiting AddPayment(amount={Amount},paymentType={PaymentType})", amount, paymentType);
             return (data, status);
         }
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "0",
@@ -326,6 +375,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogDebug(">>> Entering OpenReceipt()");
             string header;
             if (string.IsNullOrEmpty(uniqueSaleNumber))
             {
@@ -378,6 +428,7 @@
         {
             // Protocol: {OpCode}<SEP>{OpPwd}<SEP>{TillNmb}<SEP>{Storno}<SEP>{DocNum}<SEP>{DateTime}<SEP>
             //           {FM Number}<SEP>{Invoice}<SEP>{ToInvoice}<SEP>{Reason}<SEP>{NSale}<SEP>
+			_logger.LogDebug(">>> Entering OpenReversalReceipt()");
             var headerData = string.Join("\t",
                 String.IsNullOrEmpty(operatorId) ?
                     Options.ValueOrDefault("Operator.ID", "1")
@@ -398,6 +449,7 @@
                 uniqueSaleNumber,
                 "");
 
+			_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
             return Request(DatecsXCommandOpenStornoDocument, headerData.ToString());
         }
 
@@ -408,6 +460,7 @@
             DateTime startDate,
             DateTime endDate)
         {
+			_logger.LogDebug(">>> Entering PrintPeriodReport()");
             return Request(
                 DatecsXCommandFMReportByDate,
                 string.Join(
@@ -420,15 +473,18 @@
 
         protected override string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogDebug(">>> Entering FormatPeriodReportDate(date={Date})", date);
             return date.ToString("dd-MM-yy", CultureInfo.InvariantCulture);
         }
 
         public override (string, DeviceStatus) PrintDailyReport(bool zeroing = true)
         {
+			_logger.LogDebug(">>> Entering PrintDailyReport(zeroing={Zeroing})", zeroing);
             (string response, DeviceStatus status) result;
             if (zeroing)
             {
                 result = Request(CommandPrintDailyReport, "Z\t");
+				_logger.LogDebug("PrintDailyReport(zeroing={Zeroing}): result → {Result}", zeroing, result);
             }
             else
             {
@@ -448,11 +504,13 @@
                 }
                 CheckPinpadResponse(result.response.Split('\t')[0], result.status);
             }
+			_logger.LogDebug("<<< Exiting PrintDailyReport(zeroing={Zeroing})", zeroing);
             return result;
         }
 
         public void CheckPinpadResponse(string response, DeviceStatus status)
         {
+			_logger.LogDebug(">>> Entering CheckPinpadResponse(response={Response},status={Status})", response, status);
             switch (response)
             {
                 case "0":
@@ -481,6 +539,7 @@
                     status.AddError("E699", "General error from payment terminal");
                     break;
             }
+			_logger.LogDebug("<<< Exiting CheckPinpadResponse(response={Response},status={Status})", response, status);
         }
 
         // 8 Bytes x 8 bits
@@ -561,6 +620,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -585,6 +645,7 @@
                     mask >>= 1;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 

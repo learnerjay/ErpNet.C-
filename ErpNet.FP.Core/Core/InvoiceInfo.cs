@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace ErpNet.FP.Core
 {
     /// <summary>
@@ -6,6 +7,7 @@ namespace ErpNet.FP.Core
     /// </summary>
     public class InvoiceInfo : ReceiptInfo
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         /// <summary>
         /// The invoice / credit note number, as actually printed. A driver MUST always populate this
         /// on a successful invoice / credit note, regardless of numbering mode: echo the caller-supplied
