@@ -3,6 +3,7 @@
     using System;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     public partial class BgZfpFiscalPrinter : BgFiscalPrinter
     {
@@ -38,16 +39,21 @@
 
         public virtual (string, DeviceStatus) GetStatus()
         {
+			_logger.LogDebug(">>> Entering GetStatus()");
             var (deviceStatus, _ /* ignore commandStatus */) = ParseResponseAsByteArray(RawRequest(CommandGetStatus, null));
+			_logger.LogDebug("<<< Exiting GetStatus()");
             return ("", ParseStatus(deviceStatus));
         }
 
         public virtual (string, DeviceStatus) GetTaxIdentificationNumber()
         {
+			_logger.LogDebug(">>> Entering GetTaxIdentificationNumber()");
             var (response, deviceStatus) = Request(CommandGetTaxIdentificationNumber);
             var commaFields = response.Split(';');
+			_logger.LogDebug("GetTaxIdentificationNumber(): commaFields → {CommaFields}", commaFields);
             if (commaFields.Length > 1)
             {
+			_logger.LogDebug("<<< Exiting GetTaxIdentificationNumber()");
                 return (commaFields[0].Trim(), deviceStatus);
             }
             return (string.Empty, deviceStatus);
@@ -55,19 +61,24 @@
 
         public virtual (string, DeviceStatus) SubtotalChangeAmount(Decimal amount)
         {
+			_logger.LogDebug(">>> Entering SubtotalChangeAmount(amount={Amount})", amount);
             // <OptionPrinting[1]> <;> <OptionDisplay[1]> {<':'> <DiscAddV[1..8]>} {<','>< DiscAddP[1..7] >}
+			_logger.LogDebug("<<< Exiting SubtotalChangeAmount(amount={Amount})", amount);
             return Request(CommandSubtotal, $"1;0:{amount.ToString("F2", CultureInfo.InvariantCulture)}");
         }
 
         public virtual (string, DeviceStatus) GetLastReceiptQRCodeData()
         {
+			_logger.LogDebug(">>> Entering GetLastReceiptQRCodeData()");
             return Request(CommandReadLastReceiptQRCodeData, "B");
         }
 
         public virtual (string, DeviceStatus) GetFiscalMemorySerialNumber()
         {
+			_logger.LogDebug(">>> Entering GetFiscalMemorySerialNumber()");
             var (rawDeviceInfo, deviceStatus) = GetRawDeviceInfo();
             var fields = rawDeviceInfo.Split(";");
+			_logger.LogDebug("GetFiscalMemorySerialNumber(): fields → {Fields}", fields);
             if (fields != null && fields.Length > 0)
             {
                 return (fields[^1], deviceStatus);
@@ -76,12 +87,14 @@
             {
                 deviceStatus.AddInfo($"Error occured while reading device info");
                 deviceStatus.AddError("E409", $"Wrong number of fields");
+				_logger.LogDebug("<<< Exiting GetFiscalMemorySerialNumber()");
                 return (string.Empty, deviceStatus);
             }
         }
 
         public virtual (DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogDebug(">>> Entering GetDateTime()");
             var (dateTimeResponse, deviceStatus) = Request(CommandGetDateTime);
             if (!deviceStatus.Ok)
             {
@@ -98,19 +111,24 @@
             }
             catch
             {
+				_logger.LogError("Exception in GetDateTime(): {Arg0}", ex.Message);
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime()");
                 return (null, deviceStatus);
             }
         }
 
         public virtual (string, DeviceStatus) SetDeviceDateTime(DateTime dateTime)
         {
+			_logger.LogDebug(">>> Entering SetDeviceDateTime(dateTime={DateTime})", dateTime);
             return Request(CommandSetDateTime, dateTime.ToString("dd-MM-yy HH:mm:ss", CultureInfo.InvariantCulture));
         }
 
         public virtual (string, DeviceStatus) MoneyTransfer(TransferAmount transferAmount)
         {
+			_logger.LogDebug(">>> Entering MoneyTransfer(transferAmount={TransferAmount})", transferAmount);
+			_logger.LogDebug("<<< Exiting MoneyTransfer(transferAmount={TransferAmount})", transferAmount);
             return Request(CommandNoFiscalRAorPOAmount, string.Join(";", new string[]
             {
                 String.IsNullOrEmpty(transferAmount.Operator) ?
@@ -131,6 +149,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogDebug(">>> Entering OpenReceipt()");
             // Protocol: <OperNum[1..2]> <;> <OperPass[6]> <;> <ReceiptFormat[1]> <;> 
             //           <PrintVAT[1]> <;> <FiscalRcpPrintType[1]> {<’$’> <UniqueReceiptNumber[24]>}
             return Request(CommandOpenReceipt, string.Join(";", new string[] {
@@ -150,6 +169,7 @@
                 // there are many rows to be printed.
                 // Delimiter '$' before USN.
             }));
+			_logger.LogDebug("<<< Exiting OpenReceipt()");
         }
 
         public virtual (string, DeviceStatus) OpenReversalReceipt(
@@ -165,6 +185,7 @@
             //            < PrintVAT[1] > <;> < StornoRcpPrintType[1] > <;> < StornoReason[1] > <;>
             //            < RelatedToRcpNum[1..6] > <;> < RelatedToRcpDateTime ”DD-MM-YY HH:MM[:SS]”> <;>
             //            < FMNum[8] > {<;> < RelatedToURN[24] >}            
+			_logger.LogDebug(">>> Entering OpenReversalReceipt()");
             return Request(CommandOpenReceipt, string.Join(";", new string[] {
                 String.IsNullOrEmpty(operatorId) ?
                     Options.ValueOrDefault("Operator.ID", "1")
@@ -183,6 +204,7 @@
                 fiscalMemorySerialNumber,
                 uniqueSaleNumber
             }));
+			_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
         }
 
         public virtual (string, DeviceStatus) AddItem(
@@ -194,7 +216,9 @@
             decimal priceModifierValue = 0,
             PriceModifierType priceModifierType = PriceModifierType.None)
         {
+			_logger.LogDebug(">>> Entering AddItem()");
             var itemData = new FrameBuilder(PrinterEncoding);
+			_logger.LogDebug("AddItem(): itemData → {ItemData}", itemData);
 
             if (department <= 0) 
             {
@@ -261,27 +285,32 @@
             }
             else
             {
+			_logger.LogDebug("<<< Exiting AddItem()");
                 return Request(CommandSellCorrectionDepartment, itemData.ToArray());
             }
         }
 
         public virtual (string, DeviceStatus) AddComment(string text)
         {
+			_logger.LogDebug(">>> Entering AddComment(text={Text})", text);
             return Request(CommandFreeText, text.WithMaxLength(Info.CommentTextMaxLength));
         }
 
         public virtual (string, DeviceStatus) CloseReceipt()
         {
+			_logger.LogDebug(">>> Entering CloseReceipt()");
             return Request(CommandCloseReceipt);
         }
 
         public virtual (string, DeviceStatus) AbortReceipt()
         {
+			_logger.LogDebug(">>> Entering AbortReceipt()");
             return Request(CommandAbortReceipt);
         }
 
         public virtual (string, DeviceStatus) FullPaymentAndCloseReceipt()
         {
+			_logger.LogDebug(">>> Entering FullPaymentAndCloseReceipt()");
             return Request(CommandFullPaymentAndCloseReceipt);
         }
 
@@ -289,7 +318,9 @@
             decimal amount,
             PaymentType paymentType)
         {
+			_logger.LogDebug(">>> Entering AddPayment()");
             // Protocol: input: <PaymentType [1..2]> <;> <OptionChange [1]> <;> <Amount[1..10]> {<;><OptionChangeType[1]>}
+			_logger.LogDebug("<<< Exiting AddPayment()");
             return Request(CommandPayment, string.Join(";", new string[] {
                 GetPaymentTypeText(paymentType),
                 "1", // Procotol: Without change
@@ -299,12 +330,14 @@
 
         public virtual (string, DeviceStatus) PrintDailyReport(bool zeroing = true)
         {
+			_logger.LogDebug(">>> Entering PrintDailyReport(zeroing={Zeroing})", zeroing);
             if (zeroing)
             {
                 return Request(CommandPrintDailyFiscalReport, "Z");
             }
             else
             {
+				_logger.LogDebug("<<< Exiting PrintDailyReport(zeroing={Zeroing})", zeroing);
                 return Request(CommandPrintDailyFiscalReport, "X");
             }
         }
@@ -315,10 +348,12 @@
             DateTime startDate,
             DateTime endDate)
         {
+			_logger.LogDebug(">>> Entering PrintPeriodReport()");
             var command = type == PeriodReportType.Detailed
                 ? CommandPrintDetailedFMReportByDate
                 : CommandPrintBriefFMReportByDate;
 
+					_logger.LogDebug("<<< Exiting PrintPeriodReport()");
             return Request(
                 command,
                 string.Join(
@@ -331,6 +366,7 @@
 
         protected virtual string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogDebug(">>> Entering FormatPeriodReportDate(date={Date})", date);
             return date.ToString("ddMMyy", CultureInfo.InvariantCulture);
         }
 
@@ -340,14 +376,17 @@
         /// </summary>
         protected virtual bool IsLongRunningCommand(byte command)
         {
+			_logger.LogDebug(">>> Entering IsLongRunningCommand(command={Command})", command);
             return command == CommandPrintDetailedFMReportByDate
                 || command == CommandPrintBriefFMReportByDate;
         }
 
         public virtual (string, DeviceStatus) GetRawDeviceInfo()
         {
+			_logger.LogDebug(">>> Entering GetRawDeviceInfo()");
             var (responseFD, _) = Request(CommandReadFDNumbers);
             var (responseV, deviceStatus) = Request(CommandVersion);
+			_logger.LogDebug("<<< Exiting GetRawDeviceInfo()");
             return (responseV + responseFD, deviceStatus);
         }
     }

@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Eltrade Bulgaria.
@@ -10,6 +11,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgEltradeIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             EltradeCommandOpenFiscalReceipt = 0x90;
 
@@ -38,6 +40,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogDebug(">>> Entering OpenReceipt()");
             string theOperator = string.IsNullOrEmpty(operatorId)
                 ? Options.ValueOrDefault("Operator.Name", "Operator")
                 : operatorId;
@@ -46,6 +49,7 @@
             {
                 header = string.Join(",",
                     theOperator);
+					_logger.LogDebug("OpenReceipt(): header → {Header}", header);
             }
             else
             {
@@ -54,11 +58,15 @@
                     uniqueSaleNumber
                 );
             }
+			_logger.LogDebug("<<< Exiting OpenReceipt()");
             return Request(EltradeCommandOpenFiscalReceipt, header);
         }
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogDebug(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("GetReversalReasonText(reversalReason={ReversalReason}): ReversalReason.OperatorError → {Arg1}", reversalReason, ReversalReason.OperatorError);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "O",
@@ -78,6 +86,7 @@
             string operatorPassword)
         {
             // Protocol: <OperName>,<UNP>[,Type[ ,<FMIN>,<Reason>,<num>[,<time>[,<inv>]]]]
+			_logger.LogDebug(">>> Entering OpenReversalReceipt()");
             var header = string.Join(",",
                 new string[] {
                     String.IsNullOrEmpty(operatorId) ?
@@ -91,6 +100,7 @@
                     receiptNumber,
                     receiptDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)
                 });
+				_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
             return Request(EltradeCommandOpenFiscalReceipt, header);
         }
 
@@ -154,6 +164,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogDebug(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -167,11 +178,13 @@
                 if (i == 3)
                 {
                     var switchData = new List<string>();
+					_logger.LogDebug("ParseStatus(status={Status}): switchData → {SwitchData}", status, switchData);
                     // Skip bit 7
                     for (var j = 0; j < 7; j++)
                     {
                         mask >>= 1;
                         var switchState = ((mask & b) != 0) ? "ON" : "OFF";
+						_logger.LogDebug("ParseStatus(status={Status}): switchState → {SwitchState}", status, switchState);
                         switchData.Add($"SW{7 - j}={switchState}");
                     }
                     deviceStatus.AddInfo(string.Join(", ", switchData));
@@ -194,6 +207,7 @@
                     }
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
     }

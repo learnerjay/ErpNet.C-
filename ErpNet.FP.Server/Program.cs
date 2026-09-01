@@ -55,17 +55,23 @@
 
         public static void EnsureAppSettingsJson(string pathToContentRoot)
         {
+			Log.Debug(">>> Entering EnsureAppSettingsJson(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
             var appSettingsJsonFilePath = Path.Combine(pathToContentRoot, AppSettingsFileName);
 
+			Log.Debug("EnsureAppSettingsJson(pathToContentRoot={PathToContentRoot}): appSettingsJsonFilePath → {AppSettingsJsonFilePath}", pathToContentRoot, appSettingsJsonFilePath);
             if (!File.Exists(appSettingsJsonFilePath))
             {
                 var defaultAppSettings = @"{ ""ErpNet.FP"": {""AutoDetect"": true, ""Printers"": { } }, ""Kestrel"": { ""EndPoints"": { ""Http"": { ""Url"": ""http://0.0.0.0:8001"" } } } }";
+				Log.Debug("EnsureAppSettingsJson(pathToContentRoot={PathToContentRoot}): defaultAppSettings → {DefaultAppSettings}", pathToContentRoot, defaultAppSettings);
                 File.WriteAllText(appSettingsJsonFilePath, defaultAppSettings);
             }
+			Log.Debug("<<< Exiting EnsureAppSettingsJson(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
         }
 
         private static Task EnsureDebugLogHistoryInBackground(string pathToContentRoot, CancellationToken ct)
         {
+			Log.Debug(">>> Entering EnsureDebugLogHistoryInBackground(pathToContentRoot={PathToContentRoot},ct={Ct})", pathToContentRoot, ct);
+			Log.Debug("<<< Exiting EnsureDebugLogHistoryInBackground(pathToContentRoot={PathToContentRoot},ct={Ct})", pathToContentRoot, ct);
             return Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
@@ -88,8 +94,11 @@
 
         private static string EnsureDebugLogHistory(string pathToContentRoot)
         {
+			Log.Debug(">>> Entering EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
             var debugLogFolder = Path.Combine(pathToContentRoot, "wwwroot", "debug");
             var debugLogFilePath = Path.Combine(debugLogFolder, DebugLogFileName);
+			Log.Debug("EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot}): debugLogFilePath → {DebugLogFilePath}", pathToContentRoot, debugLogFilePath);
+			Log.Debug("EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot}): debugLogFolder → {DebugLogFolder}", pathToContentRoot, debugLogFolder);
             Directory.CreateDirectory(debugLogFolder);
 
             for (var i = 9; i > 1; i--)
@@ -101,6 +110,7 @@
             }
 
             var files = Directory.GetFiles(debugLogFolder, DebugLogFilePattern);
+			Log.Debug("EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot}): files → {Files}", pathToContentRoot, files);
             if (files.Length > 0)
             {
                 // Zip the files
@@ -114,27 +124,35 @@
                 }
                 
             }
+			Log.Debug("<<< Exiting EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
             return debugLogFilePath;
         }
 
         public static string GetVersion()
         {
+			Log.Debug(">>> Entering GetVersion()");
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
+			Log.Debug("GetVersion(): version → {Version}", version);
+			Log.Debug("GetVersion(): assembly → {Assembly}", assembly);
+			Log.Debug("<<< Exiting GetVersion()");
             return (version != null) ? version.ToString() : "unknown";
         }
 
         public static int Main(string[] args)
         {
             var pathToContentRoot = Directory.GetCurrentDirectory();
+			Log.Debug("Main(args={Args}): pathToContentRoot → {PathToContentRoot}", args, pathToContentRoot);
 
             var location = Assembly.GetExecutingAssembly().Location;
+			Log.Debug("Main(args={Args}): location → {Location}", args, location);
             pathToContentRoot = Path.GetDirectoryName(location) ?? pathToContentRoot;
             Directory.SetCurrentDirectory(pathToContentRoot);
 
             EnsureAppSettingsJson(pathToContentRoot);
 
             var logOutputTemplate = "[{RequestId} {Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+			Log.Debug("Main(args={Args}): logOutputTemplate → {LogOutputTemplate}", args, logOutputTemplate);
 
             var loggerConfiguration = new LoggerConfiguration()
                 .Enrich.FromLogContext()
@@ -165,10 +183,12 @@
                 builder.UseSerilog();
 
                 var host = builder.Build();
+				Log.Debug("Main(args={Args}): host → {Host}", args, host);
 
                 Log.Information($"Starting the service, version {GetVersion()}...");
 
                 var cts = new CancellationTokenSource();
+				Log.Debug("Main(args={Args}): cts → {Cts}", args, cts);
                 
                 EnsureDebugLogHistoryInBackground(pathToContentRoot, cts.Token);
 
@@ -183,6 +203,7 @@
             catch (Exception ex)
             {
                 Console.WriteLine($"Error while creating debug.log file: {ex.Message}");
+				Log.Debug("<<< Exiting Main(args={Args})", args);
                 return 1;
             }
             finally
