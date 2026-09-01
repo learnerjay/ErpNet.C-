@@ -1,6 +1,7 @@
 ﻿namespace ErpNet.FP.Core.Service
 {
     using System;
+	using Microsoft.Extensions.Logging;
     
     public enum PrintJobAction
     {
@@ -25,6 +26,7 @@
 
     public class PrintJob
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public const int DefaultTimeout = 29000; // 29 seconds
 
         public DateTime Enqueued = DateTime.Now;
@@ -50,17 +52,23 @@
 
         public void Run()
         {
+			_logger.LogDebug(">>> Entering Run()");
             if (Printer == null) return;
             
             Started = DateTime.Now;
+			_logger.LogDebug("Run(): Started → {Started}", Started);
 
             if (DeadLine <= Started)
             {                
                 Finished = DateTime.Now;
                 TaskStatus = TaskStatus.Finished;
                 var deviceStatus = new DeviceStatus();
+				_logger.LogDebug("Run(): deviceStatus → {DeviceStatus}", deviceStatus);
+				_logger.LogDebug("Run(): Finished → {Finished}", Finished);
+				_logger.LogDebug("Run(): TaskStatus → {TaskStatus}", TaskStatus);
                 deviceStatus.AddError("E999", "User timeout occured while sending the request");
                 Result = deviceStatus;
+				_logger.LogDebug("Run(): Result → {Result}", Result);
                 return;
             }
 
@@ -84,7 +92,9 @@
                         if (Document != null)
                         {
                             var receipt = (Receipt)Document;
+							_logger.LogDebug("Run(): receipt → {Receipt}", receipt);
                             var validateStatus = Printer.ValidateReceipt(receipt);
+							_logger.LogDebug("Run(): validateStatus → {ValidateStatus}", validateStatus);
                             if (validateStatus.Ok)
                             {
                                 var (info, status) = Printer.PrintReceipt(receipt);
@@ -100,6 +110,7 @@
                         if (Document != null)
                         {
                             var reversalReceipt = (ReversalReceipt)Document;
+							_logger.LogDebug("Run(): reversalReceipt → {ReversalReceipt}", reversalReceipt);
                             var validateStatus = Printer.ValidateReversalReceipt(reversalReceipt);
                             if (validateStatus.Ok)
                             {
@@ -116,6 +127,7 @@
                         if (Document != null)
                         {
                             var invoice = (Invoice)Document;
+							_logger.LogDebug("Run(): invoice → {Invoice}", invoice);
                             var validateStatus = Printer.ValidateInvoice(invoice);
                             if (validateStatus.Ok)
                             {
@@ -132,6 +144,7 @@
                         if (Document != null)
                         {
                             var creditNote = (CreditNote)Document;
+							_logger.LogDebug("Run(): creditNote → {CreditNote}", creditNote);
                             var validateStatus = Printer.ValidateCreditNote(creditNote);
                             if (validateStatus.Ok)
                             {
@@ -148,6 +161,7 @@
                         if (Document != null)
                         {
                             var transferAmount = (TransferAmount)Document;
+							_logger.LogDebug("Run(): transferAmount → {TransferAmount}", transferAmount);
                             var validateStatus = Printer.ValidateTransferAmount(transferAmount);
                             if (validateStatus.Ok)
                             {
@@ -184,6 +198,7 @@
                         if (Document != null)
                         {
                             var periodReport = (PeriodReport)Document;
+							_logger.LogDebug("Run(): periodReport → {PeriodReport}", periodReport);
                             var validateStatus = Printer.ValidatePeriodReport(periodReport);
                             if (validateStatus.Ok)
                             {
@@ -199,9 +214,11 @@
                         if (Document != null)
                         {
                             var dateTimeDocument = (CurrentDateTime)Document;
+							_logger.LogDebug("Run(): dateTimeDocument → {DateTimeDocument}", dateTimeDocument);
                             if (dateTimeDocument.DeviceDateTime == System.DateTime.MinValue)
                             {
                                 dateTimeDocument.DeviceDateTime = DateTime.Now;
+								_logger.LogDebug("Run(): dateTimeDocument.DeviceDateTime → {Arg0}", dateTimeDocument.DeviceDateTime);
                             }
                             Result = Printer.SetDateTime(dateTimeDocument);
                         };
@@ -221,6 +238,7 @@
                 Finished = DateTime.Now;
                 TaskStatus = TaskStatus.Finished;
                 Printer.SetDeadLine(DateTime.MaxValue);
+			_logger.LogDebug("<<< Exiting Run()");
             }
         }
 

@@ -21,6 +21,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             bool autoDetect = true,
             IDictionary<string, string>? options = null)
         {
+			Log.Debug(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgSisJsonFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"sis.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -51,12 +52,14 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
 
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, string model, string fwChecksum, bool autoDetect)
         {
+			Log.Debug(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect})", rawDeviceInfo, model, fwChecksum, autoDetect);
             JObject json;
             try
             {
@@ -64,18 +67,23 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             }
             catch (Exception ex)
             {
+				Log.Error("Exception in ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect}): {Arg4}", rawDeviceInfo, model, fwChecksum, autoDetect, ex.Message);
                 throw new InvalidDeviceInfoException(
                     $"getMfcInfo did not return valid JSON for '{DriverName}': {ex.Message}");
             }
 
             var fdNumber = (json.Value<string>("FDNumber") ?? string.Empty).Trim();
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect}): fdNumber → {FdNumber}", rawDeviceInfo, model, fwChecksum, autoDetect, fdNumber);
             var fmNumber = (json.Value<string>("FMNumber") ?? string.Empty).Trim();
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect}): fmNumber → {FmNumber}", rawDeviceInfo, model, fwChecksum, autoDetect, fmNumber);
             var idNumber = (json.Value<string>("IDNumber") ?? string.Empty).Trim();
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect}): idNumber → {IdNumber}", rawDeviceInfo, model, fwChecksum, autoDetect, idNumber);
 
             if (autoDetect)
             {
                 if (!_fiscalDeviceNumberPattern.IsMatch(fdNumber))
                 {
+					Log.Warning("Throwing InvalidDeviceInfoException from ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect})", rawDeviceInfo, model, fwChecksum, autoDetect);
                     throw new InvalidDeviceInfoException(
                         $"FDNumber '{fdNumber}' is not in the expected format (2 letters + 6 digits) for '{DriverName}'");
                 }
@@ -87,6 +95,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             }
 
             var (commentMax, itemMax) = GetTextLimitsForModel(model);
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect})", rawDeviceInfo, model, fwChecksum, autoDetect);
             return new DeviceInfo
             {
                 SerialNumber = fdNumber,
@@ -110,6 +119,8 @@ namespace ErpNet.FP.Core.Drivers.BgSis
         /// </summary>
         protected static (int commentMax, int itemMax) GetTextLimitsForModel(string model)
         {
+			Log.Debug(">>> Entering GetTextLimitsForModel(model={Model})", model);
+			Log.Debug("<<< Exiting GetTextLimitsForModel(model={Model})", model);
             return model switch
             {
                 "MF-P1200DN" => (42, 64),

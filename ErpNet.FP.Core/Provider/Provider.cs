@@ -19,6 +19,7 @@ namespace ErpNet.FP.Core.Provider
     {
         public Provider(ServiceOptions serviceOptions)
         {
+			Log.Debug(">>> Entering Provider(serviceOptions={ServiceOptions})", serviceOptions);
             this.ServiceOptions = serviceOptions;
         }
         /// <summary>
@@ -29,8 +30,11 @@ namespace ErpNet.FP.Core.Provider
         /// <param name="transport">The transport.</param>
         public Provider Register(FiscalPrinterDriver driver, Transport transport)
         {
+			Log.Debug(">>> Entering Register(driver={Driver},transport={Transport})", driver, transport);
             var key = driver.DriverName + "." + transport.TransportName;
             protocols.Add(key, (driver, transport));
+			Log.Warning("Register(driver={Driver},transport={Transport}): key → {Key}", driver, transport, key);
+			Log.Debug("<<< Exiting Register(driver={Driver},transport={Transport})", driver, transport);
             return this;
         }
 
@@ -39,6 +43,7 @@ namespace ErpNet.FP.Core.Provider
             Transport transport,
             List<FiscalPrinterDriver> drivers)
         {
+			Log.Debug(">>> Entering DetectPrinterAsync(channel={Channel},transport={Transport},drivers={Drivers})", channel, transport, drivers);
             IFiscalPrinter? printer = null;
             var unknownDeviceConnectedToChannel = true;
             var positionInList = 1;
@@ -106,6 +111,7 @@ namespace ErpNet.FP.Core.Provider
                 // transport.Drop(channel);   // hangs here if device driver problem occure
             }
             Log.Information($"Probing finished for {channel.Descriptor}.");
+			Log.Debug("<<< Exiting DetectPrinterAsync(channel={Channel},transport={Transport},drivers={Drivers})", channel, transport, drivers);
             return printer;
         }
 
@@ -193,13 +199,18 @@ namespace ErpNet.FP.Core.Provider
         /// <exception cref="InvalidOperationException">When the printer is not found or the URI is not correctly formatted.</exception>
         public IFiscalPrinter Connect(string deviceUri, ServiceOptions serviceOptions, bool autoDetect = true, IDictionary<string, string>? options = null)
         {
+			Log.Debug(">>> Entering Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", deviceUri, serviceOptions, autoDetect, options);
             var match = uriPattern.Match(deviceUri);
             if (!match.Success)
+					Log.Warning("Throwing FormatException from Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", deviceUri, serviceOptions, autoDetect, options);
+					Log.Debug("Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): match → {Match}", deviceUri, serviceOptions, autoDetect, options, match);
                 throw new FormatException(
                     $"'{deviceUri}' is not recognized as valid device URI (protocol://address)");
 
             var protocol = match.Groups["protocol"].Value;
+			Log.Debug("Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): protocol → {Protocol}", deviceUri, serviceOptions, autoDetect, options, protocol);
             var address = match.Groups["address"].Value;
+			Log.Debug("Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): address → {Address}", deviceUri, serviceOptions, autoDetect, options, address);
 
             FiscalPrinterDriver driver;
             Transport transport;
@@ -209,15 +220,20 @@ namespace ErpNet.FP.Core.Provider
             }
             catch
             {
+				Log.Error("Exception in Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): {Arg4}", deviceUri, serviceOptions, autoDetect, options, ex.Message);
                 throw new InvalidOperationException($"Unknown protocol '{protocol}'.");
             }
 
             var channel = transport.OpenChannel(address);
+			Log.Debug("Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): channel → {Channel}", deviceUri, serviceOptions, autoDetect, options, channel);
             var uri = string.Format($"{driver.DriverName}.{transport.TransportName}://{channel.Descriptor}");
+			Log.Debug("Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): uri → {Uri}", deviceUri, serviceOptions, autoDetect, options, uri);
             try
             {
                 var p = driver.Connect(channel, serviceOptions, autoDetect, options);
+				Log.Debug("Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options}): p → {P}", deviceUri, serviceOptions, autoDetect, options, p);
                 p.DeviceInfo.Uri = uri;
+				Log.Debug("<<< Exiting Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", deviceUri, serviceOptions, autoDetect, options);
                 return p;
             }
             catch (Exception ex)
