@@ -8,18 +8,21 @@
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Hosting;
+	using Microsoft.Extensions.Logging;
 
     // PrintersController, example: //host/service/[controller]
     [Route("[controller]")]
     [ApiController]
     public class ServiceController : ControllerBase
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         private readonly IServiceController context;
         private readonly IHostApplicationLifetime serviceLifeTime;
         private readonly ServerVariables serverVariables = new ServerVariables();
 
         public ServiceController(IServiceController context, IHostApplicationLifetime serviceLifeTime)
         {
+			_logger.LogInformation(">>> Entering ServiceController(context={Context},serviceLifeTime={ServiceLifeTime})", context, serviceLifeTime);
             this.context = context;
             this.serviceLifeTime = serviceLifeTime;
 
@@ -32,6 +35,7 @@
             serverVariables.ExcludePortList = context.ExcludePortList;
             serverVariables.DetectionTimeout = context.DetectionTimeout;
             serverVariables.WebAccess = context.WebAccess;
+			_logger.LogDebug("<<< Exiting ServiceController(context={Context},serviceLifeTime={ServiceLifeTime})", context, serviceLifeTime);
         }
 
         // GET vars
@@ -44,7 +48,11 @@
         public ActionResult<ServerVariables> ToggleAutoDetect()
         {
             context.AutoDetect = !context.AutoDetect;
+			_logger.LogInformation(">>> Entering ToggleAutoDetect()");
             serverVariables.AutoDetect = context.AutoDetect;
+			_logger.LogInformation(">>> Entering Detect()");
+			_logger.LogDebug("<<< Exiting Detect()");
+			_logger.LogDebug("<<< Exiting ToggleAutoDetect()");
             return serverVariables;
         }
 
@@ -52,6 +60,7 @@
         [HttpPost("excludeports")]
         public ActionResult<ServerVariables> ExcludePorts(Dictionary<string, string> param) 
         {
+			_logger.LogInformation(">>> Entering ExcludePorts(param={Param})", param);
             //context.AutoDetect = !context.AutoDetect;
             string? newValue;
             if (param.TryGetValue("ExcludePortList", out newValue))
@@ -62,6 +71,7 @@
                 serverVariables.ExcludePortList = excludePortString;
                 context.ExcludePortList = excludePortString;
             }
+			_logger.LogDebug("<<< Exiting ExcludePorts(param={Param})", param);
             return serverVariables;
         }
 
@@ -69,6 +79,7 @@
         [HttpPost("detectiontimeout")]
         public ActionResult<ServerVariables> DetectionTimeout(Dictionary<string, string> param)
         {
+			_logger.LogInformation(">>> Entering DetectionTimeout(param={Param})", param);
             string? newValue;
             if (param.TryGetValue("DetectionTimeout", out newValue))
             {
@@ -81,6 +92,7 @@
                     }
                 }
             }
+			_logger.LogDebug("<<< Exiting DetectionTimeout(param={Param})", param);
             return serverVariables;
         }
 
@@ -99,6 +111,7 @@
         [HttpGet("stop")]
         public ActionResult Stop()
         {
+			_logger.LogInformation(">>> Entering Stop()");
             try
             {
                 serviceLifeTime.StopApplication();
@@ -106,6 +119,7 @@
             }
             catch
             {
+				_logger.LogDebug("<<< Exiting Stop()");
                 return StatusCode(StatusCodes.Status423Locked);
             }
         }
@@ -126,12 +140,14 @@
         [HttpPost("webaccess")]
         public ActionResult<ServerVariables> UpdateWebAccess([FromBody] WebAccessOptions newWebAccess)
         {
+			_logger.LogInformation(">>> Entering UpdateWebAccess(newWebAccess={NewWebAccess})", newWebAccess);
             if (newWebAccess == null)
                 return BadRequest("Invalid configuration data.");
 
             context.WebAccess = newWebAccess;
             serverVariables.WebAccess = context.WebAccess;
 
+			_logger.LogDebug("<<< Exiting UpdateWebAccess(newWebAccess={NewWebAccess})", newWebAccess);
             return Ok(serverVariables);
         }
 
@@ -146,10 +162,12 @@
             [FromBody] PrinterConfigWithId printerConfigWithId
         )
         {
+			_logger.LogInformation(">>> Entering Configure(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
             if (context.ConfigurePrinter(printerConfigWithId))
             {
                 return StatusCode(StatusCodes.Status200OK);
             }
+			_logger.LogDebug("<<< Exiting Configure(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
             return StatusCode(StatusCodes.Status423Locked);
         }
 
@@ -159,10 +177,12 @@
             [FromBody] PrinterConfigWithId printerConfigWithId
         )
         {
+			_logger.LogInformation(">>> Entering Delete(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
             if (context.DeletePrinter(printerConfigWithId))
             {
                 return StatusCode(StatusCodes.Status200OK);
             }
+			_logger.LogDebug("<<< Exiting Delete(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
             return StatusCode(StatusCodes.Status423Locked);
         }
     }

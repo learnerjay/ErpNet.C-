@@ -3,11 +3,14 @@
     using System;
     using System.Collections.Generic;
     using System.Text.RegularExpressions;
+	using Microsoft.Extensions.Logging;
 
     public static class Helpers
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public static T[] Slice<T>(this T[] arr, uint indexFrom, uint indexTo)
         {
+			_logger.LogInformation(">>> Entering Slice(arr={Arr},indexFrom={IndexFrom},indexTo={IndexTo})", arr, indexFrom, indexTo);
             if (indexFrom > indexTo)
             {
                 throw new ArgumentOutOfRangeException("indexFrom is bigger than indexTo!");
@@ -17,11 +20,13 @@
             T[] result = new T[length];
             Array.Copy(arr, indexFrom, result, 0, length);
 
+			_logger.LogDebug("<<< Exiting Slice(arr={Arr},indexFrom={IndexFrom},indexTo={IndexTo})", arr, indexFrom, indexTo);
             return result;
         }
 
         public static string WithMaxLength(this string text, int maxLength = 72)
         {
+			_logger.LogInformation(">>> Entering WithMaxLength(text={Text},maxLength={MaxLength})", text, maxLength);
             if (text.Length <= maxLength)
             {
                 return text;
@@ -32,6 +37,7 @@
 
         public static IEnumerable<string> WrapAtLength(this string text, int maxLength)
         {
+			_logger.LogInformation(">>> Entering WrapAtLength(text={Text},maxLength={MaxLength})", text, maxLength);
             if (text == null)
                 throw new ArgumentNullException("text");
             if (maxLength < 1)
@@ -49,6 +55,7 @@
                 listOfStrings.Add(text.Substring(index, length));
             }
 
+			_logger.LogDebug("<<< Exiting WrapAtLength(text={Text},maxLength={MaxLength})", text, maxLength);
             return listOfStrings;
         }
 
@@ -80,6 +87,7 @@
         {
             var listOfStrings = new List<string>();
             int ix = 0;
+			_logger.LogInformation(">>> Entering Split(str={Str},chunkSizes={ChunkSizes})", str, chunkSizes);
             foreach (var chunkSize in chunkSizes)
             {
                 if (ix + chunkSize > str.Length)
@@ -89,18 +97,22 @@
                 listOfStrings.Add(str.Substring(ix, chunkSize));
                 ix += chunkSize;
             }
+			_logger.LogDebug("<<< Exiting Split(str={Str},chunkSizes={ChunkSizes})", str, chunkSizes);
             return listOfStrings.ToArray();
         }
         public static int IntPow(this int a, int b)
         {
+			_logger.LogInformation(">>> Entering IntPow(a={A},b={B})", a, b);
             int result = 1;
             for (int i = 0; i < b; i++)
                 result *= a;
+			_logger.LogDebug("<<< Exiting IntPow(a={A},b={B})", a, b);
             return result;
         }
 
         public static int ParseTimeout(this string s)
         {
+			_logger.LogInformation(">>> Entering ParseTimeout(s={S})", s);
             int value = 0;
             var match = TimeoutRegex.Match(s);
             if (match.Success &&
@@ -125,6 +137,7 @@
                         break;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseTimeout(s={S})", s);
             return value;
         }
 

@@ -4,6 +4,7 @@
     using System.Runtime.Serialization;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Reversal Reason
@@ -25,6 +26,7 @@
     /// </summary>
     public class ReversalReceipt : Receipt
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public string ReceiptNumber { get; set; } = string.Empty;
         public System.DateTime ReceiptDateTime { get; set; }
         public string FiscalMemorySerialNumber { get; set; } = string.Empty;
@@ -34,6 +36,7 @@
 
         public ReversalReceipt CloneReceipt(Receipt receipt)
         {
+			_logger.LogInformation(">>> Entering CloneReceipt(receipt={Receipt})", receipt);
             if (receipt.Items != null)
             {
                 Items = receipt.Items.ToList();
@@ -43,6 +46,7 @@
                 Payments = receipt.Payments.ToList();
             }
             UniqueSaleNumber = receipt.UniqueSaleNumber;
+			_logger.LogDebug("<<< Exiting CloneReceipt(receipt={Receipt})", receipt);
             return this;
         }
     }

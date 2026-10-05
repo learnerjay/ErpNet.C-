@@ -1,6 +1,7 @@
 ﻿namespace ErpNet.FP.Core.Service
 {
     using System;
+	using Microsoft.Extensions.Logging;
     
     public enum PrintJobAction
     {
@@ -25,6 +26,7 @@
 
     public class PrintJob
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public const int DefaultTimeout = 29000; // 29 seconds
 
         public DateTime Enqueued = DateTime.Now;
@@ -50,6 +52,7 @@
 
         public void Run()
         {
+			_logger.LogInformation(">>> Entering Run()");
             if (Printer == null) return;
             
             Started = DateTime.Now;
@@ -221,6 +224,7 @@
                 Finished = DateTime.Now;
                 TaskStatus = TaskStatus.Finished;
                 Printer.SetDeadLine(DateTime.MaxValue);
+			_logger.LogDebug("<<< Exiting Run()");
             }
         }
 

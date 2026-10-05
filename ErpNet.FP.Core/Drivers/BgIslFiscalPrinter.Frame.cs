@@ -27,6 +27,8 @@
 
         protected virtual byte[] UInt16To4Bytes(UInt16 word)
         {
+			Log.Information(">>> Entering UInt16To4Bytes(word={Word})", word);
+			Log.Debug("<<< Exiting UInt16To4Bytes(word={Word})", word);
             return new byte[]{
                 (byte)((word >> 12 & 0x0f) + 0x30),
                 (byte)((word >> 8 & 0x0f) + 0x30),
@@ -36,16 +38,19 @@
         }
         protected virtual byte[] ComputeBCC(byte[] fragment)
         {
+			Log.Information(">>> Entering ComputeBCC(fragment={Fragment})", fragment);
             UInt16 bccSum = 0;
             foreach (byte b in fragment)
             {
                 bccSum += b;
             }
+			Log.Debug("<<< Exiting ComputeBCC(fragment={Fragment})", fragment);
             return UInt16To4Bytes(bccSum);
         }
 
         protected virtual byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			Log.Information(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -66,11 +71,13 @@
             frame.AddRange(ComputeBCC(frame.Skip(1).ToArray()));
             frame.Add(MarkerTerminator);
 
+			Log.Debug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
         protected virtual byte[]? RawRequest(byte command, byte[]? data)
         {
+			Log.Information(">>> Entering RawRequest(command={Command},data={Data})", command, data);
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
             var beginTime = DateTime.Now;
 
@@ -171,11 +178,15 @@
                     }
                 }
             }
+			Log.Information(">>> Entering Request(command={Command},data={Data})", command, data);
+			Log.Debug("<<< Exiting Request(command={Command},data={Data})", command, data);
+			Log.Debug("<<< Exiting RawRequest(command={Command},data={Data})", command, data);
             return null;
         }
 
         protected virtual (string, DeviceStatus) ParseResponse(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseResponse(rawResponse={RawResponse})", rawResponse);
             if (rawResponse == null)
             {
                 throw new InvalidResponseException("no response");
@@ -210,6 +221,7 @@
                 {
                     var response = PrinterEncoding.GetString(data);
 
+					Log.Debug("<<< Exiting ParseResponse(rawResponse={RawResponse})", rawResponse);
                     return (response, ParseStatus(status));
                 }
             }
@@ -218,6 +230,7 @@
 
         public override DeviceStatusWithRawResponse RawRequest(RequestFrame requestFrame)
         {
+			Log.Information(">>> Entering RawRequest(requestFrame={RequestFrame})", requestFrame);
             if (requestFrame.RawRequest.Length == 0)
             {
                 var deviceStatus = new DeviceStatus();

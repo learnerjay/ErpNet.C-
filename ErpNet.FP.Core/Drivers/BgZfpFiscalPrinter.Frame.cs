@@ -39,6 +39,8 @@
 
         protected virtual byte[] ByteTo2Bytes(UInt16 word)
         {
+			Log.Information(">>> Entering ByteTo2Bytes(word={Word})", word);
+			Log.Debug("<<< Exiting ByteTo2Bytes(word={Word})", word);
             return new byte[]{
                 (byte)((word >> 4 & 0x0f) + 0x30),
                 (byte)((word >> 0 & 0x0f) + 0x30)
@@ -46,16 +48,19 @@
         }
         protected virtual byte[] ComputeCS(byte[] fragment)
         {
+			Log.Information(">>> Entering ComputeCS(fragment={Fragment})", fragment);
             byte bccSum = 0;
             foreach (byte b in fragment)
             {
                 bccSum ^= b;
             }
+			Log.Debug("<<< Exiting ComputeCS(fragment={Fragment})", fragment);
             return ByteTo2Bytes(bccSum);
         }
 
         protected virtual byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			Log.Information(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -75,11 +80,13 @@
             frame.AddRange(ComputeCS(frame.Skip(1).ToArray()));
             frame.Add(MarkerETX);
 
+			Log.Debug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
         protected void WaitForDeviceToBeReady()
         {
+			Log.Information(">>> Entering WaitForDeviceToBeReady()");
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
 
             for (; ; )
@@ -153,11 +160,13 @@
                         throw new InvalidResponseException("invalid ping reply code");
                 }
             }
+			Log.Debug("<<< Exiting WaitForDeviceToBeReady()");
             throw new TimeoutException("ping timeout");
         }
 
         protected virtual byte[]? RawRequest(byte command, byte[]? data)
         {
+			Log.Information(">>> Entering RawRequest(command={Command},data={Data})", command, data);
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
 
             FrameSequenceNumber++;
@@ -264,21 +273,27 @@
                     }
                 }
             }
+			Log.Information(">>> Entering Request(command={Command},data={Data})", command, data);
+			Log.Debug("<<< Exiting Request(command={Command},data={Data})", command, data);
+			Log.Debug("<<< Exiting RawRequest(command={Command},data={Data})", command, data);
             return null;
         }
 
         protected virtual (string, DeviceStatus) ParseResponse(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseResponse(rawResponse={RawResponse})", rawResponse);
             var (response, status) = ParseResponseAsByteArray(rawResponse);
             if (response == null)
             {
                 return ("", status);
             }
+			Log.Debug("<<< Exiting ParseResponse(rawResponse={RawResponse})", rawResponse);
             return (PrinterEncoding.GetString(response), status);
         }
 
         protected virtual (byte[]?, DeviceStatus) ParseResponseAsByteArray(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseResponseAsByteArray(rawResponse={RawResponse})", rawResponse);
             if (rawResponse == null)
             {
                 throw new InvalidResponseException("no response");
@@ -327,6 +342,7 @@
                 var computedCS = ComputeCS(rawResponse.Slice(dataStartPos + 1u, msgEndPos));
                 if (cs.SequenceEqual(computedCS))
                 {
+					Log.Debug("<<< Exiting ParseResponseAsByteArray(rawResponse={RawResponse})", rawResponse);
                     return (data, ParseStatus(null));
                 }
             }
@@ -336,6 +352,7 @@
 
         public override DeviceStatusWithRawResponse RawRequest(RequestFrame requestFrame)
         {
+			Log.Information(">>> Entering RawRequest(requestFrame={RequestFrame})", requestFrame);
             if (requestFrame.RawRequest.Length == 0)
             {
                 var deviceStatus = new DeviceStatus();

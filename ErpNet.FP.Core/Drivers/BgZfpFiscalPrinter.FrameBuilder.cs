@@ -2,6 +2,7 @@
 {
     using System.IO;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     public partial class BgZfpFiscalPrinter
     {
@@ -11,6 +12,7 @@
         /// </summary>
         protected sealed class FrameBuilder
         {
+        	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
             private readonly MemoryStream _buffer = new();
             private readonly Encoding _encoding;
 
@@ -20,7 +22,9 @@
             /// </summary>
             public FrameBuilder(Encoding encoding)
             {
+				_logger.LogInformation(">>> Entering FrameBuilder(encoding={Encoding})", encoding);
                 _encoding = encoding;
+				_logger.LogDebug("<<< Exiting FrameBuilder(encoding={Encoding})", encoding);
             }
 
             /// <summary>
@@ -28,9 +32,11 @@
             /// </summary>
             public FrameBuilder Append(string text)
             {
+				_logger.LogInformation(">>> Entering Append(text={Text})", text);
                 var bytes = _encoding.GetBytes(text);
                 _buffer.Write(bytes, 0, bytes.Length);
 
+				_logger.LogDebug("<<< Exiting Append(text={Text})", text);
                 return this;
             }
 
@@ -58,7 +64,12 @@
             /// <summary>
             /// Returns the accumulated payload as a new byte array.
             /// </summary>
-            public byte[] ToArray() => _buffer.ToArray();
+            public byte[] ToArray()
+            {
+                _logger.LogInformation(">>> Entering ToArray()");
+                _logger.LogDebug("<<< Exiting ToArray()");
+                return _buffer.ToArray();
+            }
         }
     }
 }

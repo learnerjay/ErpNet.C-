@@ -19,6 +19,7 @@ namespace ErpNet.FP.Core.Drivers.BgIncotex
             bool autoDetect = true, 
             IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgIncotexIslFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"isl.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -41,12 +42,14 @@ namespace ErpNet.FP.Core.Drivers.BgIncotex
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect, string? rawDeviceConstants = null)
         {
+			Log.Information(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
             // 2.11 Jan 22 2019 14:00,DB44EEAD,0000,06,IN015013,54015013,284013911622147
             var commaFields = rawDeviceInfo.Split(',');
             if (commaFields.Length < 7)
@@ -72,6 +75,7 @@ namespace ErpNet.FP.Core.Drivers.BgIncotex
             {
                 throw new InvalidDeviceInfoException($"rawDeviceConstants must contain 25 comma-separated items for '{DriverName}'");
             }
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
             return new DeviceInfo
             {
                 SerialNumber = serialNumber,

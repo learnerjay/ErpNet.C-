@@ -19,6 +19,7 @@ namespace ErpNet.FP.Core.Drivers.BgDaisy
             bool autoDetect = true, 
             IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgDaisyIslFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"isl.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -41,12 +42,14 @@ namespace ErpNet.FP.Core.Drivers.BgDaisy
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect, string? rawDeviceConstants = null)
         {
+			Log.Information(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
             var commaFields = rawDeviceInfo.Split(',');
             if (commaFields.Length != 6)
             {
@@ -76,6 +79,7 @@ namespace ErpNet.FP.Core.Drivers.BgDaisy
             {
                 throw new InvalidDeviceInfoException($"rawDeviceConstants must contain 25 comma-separated items for '{DriverName}'");
             }
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect},rawDeviceConstants={RawDeviceConstants})", rawDeviceInfo, autoDetect, rawDeviceConstants);
             return new DeviceInfo
             {
                 SerialNumber = serialNumber,

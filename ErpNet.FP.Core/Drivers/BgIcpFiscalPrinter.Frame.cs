@@ -27,6 +27,7 @@
         protected const int MaxReadRetriesLongRunning = 3000;
         protected virtual byte[] BuildHostFrame(byte[]? data)
         {
+			Log.Information(">>> Entering BuildHostFrame(data={Data})", data);
             // Frame header
             var frame = new List<byte>
             {
@@ -38,11 +39,14 @@
             frame.AddRange(ComputeCS(frame.ToArray()));
             frame.Add(MarkerETX);
 
+			Log.Debug("<<< Exiting BuildHostFrame(data={Data})", data);
             return frame.ToArray();
         }
 
         protected virtual byte[] ByteTo2Bytes(byte b)
         {
+			Log.Information(">>> Entering ByteTo2Bytes(b={B})", b);
+			Log.Debug("<<< Exiting ByteTo2Bytes(b={B})", b);
             return new byte[]{
                 (byte)((b >> 4 & 0x0f) + 0x30),
                 (byte)((b >> 0 & 0x0f) + 0x30)
@@ -50,16 +54,19 @@
         }
         protected virtual byte[] ComputeCS(byte[] fragment)
         {
+			Log.Information(">>> Entering ComputeCS(fragment={Fragment})", fragment);
             byte sum = 0;
             foreach (byte b in fragment)
             {
                 sum += b;
             }
+			Log.Debug("<<< Exiting ComputeCS(fragment={Fragment})", fragment);
             return ByteTo2Bytes(sum);
         }
 
         protected virtual byte[]? RawRequest(byte[]? data)
         {
+			Log.Information(">>> Entering RawRequest(data={Data})", data);
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
 
             var request = BuildHostFrame(data);
@@ -159,11 +166,15 @@
                     }
                 }
             }
+			Log.Information(">>> Entering Request(data={Data})", data);
+			Log.Debug("<<< Exiting Request(data={Data})", data);
+			Log.Debug("<<< Exiting RawRequest(data={Data})", data);
             return null;
         }
 
         protected virtual string ParseResponse(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseResponse(rawResponse={RawResponse})", rawResponse);
             var data = ParseRawResponse(rawResponse);
 
             if (data == null)
@@ -173,11 +184,13 @@
 
             var response = PrinterEncoding.GetString(data);
 
+			Log.Debug("<<< Exiting ParseResponse(rawResponse={RawResponse})", rawResponse);
             return response;
         }
 
         protected virtual byte[]? ParseRawResponse(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseRawResponse(rawResponse={RawResponse})", rawResponse);
             if (rawResponse == null)
             {
                 throw new InvalidResponseException("no response");
@@ -213,6 +226,7 @@
                     return data;
                 }
             }
+			Log.Debug("<<< Exiting ParseRawResponse(rawResponse={RawResponse})", rawResponse);
             throw new InvalidResponseException("the response is invalid");
         }
 
@@ -257,6 +271,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? rawStatus)
         {
+			Log.Information(">>> Entering ParseStatus(rawStatus={RawStatus})", rawStatus);
             var deviceStatus = new DeviceStatus();
             if (rawStatus == null || rawStatus.Length != 12)
             {
@@ -291,6 +306,7 @@
                     mask >>= 1;
                 }
             }
+			Log.Debug("<<< Exiting ParseStatus(rawStatus={RawStatus})", rawStatus);
             return deviceStatus;
         }
 

@@ -21,6 +21,7 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
             bool autoDetect = true, 
             IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgDatecsXIslFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"x.isl.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -40,12 +41,14 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
                 serviceOptions.ReconfigurePrinterOptions(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected int GetPrintColumnsOfModel(string modelName)
         {
+			Log.Information(">>> Entering GetPrintColumnsOfModel(modelName={ModelName})", modelName);
             /*
             PrintColumns - Number of printer columns:
             - for FP-700X = 42, 48 or 64 columns;
@@ -53,6 +56,7 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
             - for FMP-55X = 32 columns;
             - for DP-25X, DP-150X, WP-500X, WP-50X = 42 columns;
             */
+			Log.Debug("<<< Exiting GetPrintColumnsOfModel(modelName={ModelName})", modelName);
             return modelName switch
             {
                 "FP-700X" => 48,
@@ -66,6 +70,7 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect)
         {
+			Log.Information(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             var commaFields = rawDeviceInfo.Split(new char[] { ',', ' ', '\t'});  // for compatibility reasons
             if (commaFields.Length != 8)
             {
@@ -106,6 +111,7 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
             };
 
 
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             return info;
         }
     }

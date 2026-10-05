@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -14,6 +15,7 @@
 
         protected override byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			_logger.LogInformation(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -34,11 +36,13 @@
             frame.AddRange(ComputeBCC(frame.Skip(1).ToArray()));
             frame.Add(MarkerTerminator);
 
+			_logger.LogDebug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
         protected override (string, DeviceStatus) ParseResponse(byte[]? rawResponse)
         {
+			_logger.LogInformation(">>> Entering ParseResponse(rawResponse={RawResponse})", rawResponse);
             if (rawResponse == null)
             {
                 throw new InvalidResponseException("no response");
@@ -73,6 +77,7 @@
                 {
                     var response = PrinterEncoding.GetString(data);
 
+					_logger.LogDebug("<<< Exiting ParseResponse(rawResponse={RawResponse})", rawResponse);
                     return (response, ParseStatus(status));
                 }
             }
