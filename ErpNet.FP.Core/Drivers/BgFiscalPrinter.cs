@@ -6,6 +6,7 @@
     using System.Text;
     using System.Text.RegularExpressions;
     using ErpNet.FP.Core.Configuration;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer base class for Bg printers.
@@ -13,6 +14,7 @@
     /// <seealso cref="ErpNet.FP.IFiscalPrinter" />
     public abstract class BgFiscalPrinter : IFiscalPrinter
     {
+	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
         protected readonly object frameSyncLock = new object();
 
@@ -28,11 +30,13 @@
             ServiceOptions serviceOptions, 
             IDictionary<string, string>? options = null)
         {
+			_logger.LogInformation(">>> Entering BgFiscalPrinter(channel={Channel},serviceOptions={ServiceOptions},options={Options})", channel, serviceOptions, options);
             ServiceOptions = serviceOptions;
             Options = new Dictionary<string, string>()
                 .MergeWith(GetDefaultOptions())
                 .MergeWith(options);            
             Channel = channel;
+			_logger.LogDebug("<<< Exiting BgFiscalPrinter(channel={Channel},serviceOptions={ServiceOptions},options={Options})", channel, serviceOptions, options);
         }
 
         protected abstract DeviceStatus ParseStatus(byte[]? status);
@@ -54,6 +58,7 @@
 
         public string GetPaymentTypeText(PaymentType paymentType)
         {
+			_logger.LogInformation(">>> Entering GetPaymentTypeText(paymentType={PaymentType})", paymentType);
             if (PaymentTypeMappings.TryGetValue(paymentType, out string? value))
             {
                 if (value != null)
@@ -61,11 +66,14 @@
                     return value;
                 }
             }
+			_logger.LogDebug("<<< Exiting GetPaymentTypeText(paymentType={PaymentType})", paymentType);
             throw new StandardizedStatusMessageException($"Payment type {paymentType} unsupported", "E406");
         }
 
         public virtual string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogInformation(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "0",
@@ -77,7 +85,9 @@
 
         public ICollection<PaymentType> GetSupportedPaymentTypes()
         {
+			_logger.LogInformation(">>> Entering GetSupportedPaymentTypes()");
             PaymentTypeMappings = GetPaymentTypeMappings();
+			_logger.LogDebug("<<< Exiting GetSupportedPaymentTypes()");
             return PaymentTypeMappings.Keys;
         }
 
@@ -108,6 +118,7 @@
 
         public virtual DeviceStatus ValidateReceipt(Receipt receipt)
         {
+			_logger.LogInformation(">>> Entering ValidateReceipt(receipt={Receipt})", receipt);
             var status = new DeviceStatus();
             if (receipt.Items == null || receipt.Items.Count == 0)
             {
@@ -280,11 +291,13 @@
                     status.AddError("E403", $"Payment total amount ({paymentAmount.ToString(CultureInfo.InvariantCulture)}) should be the same as the items total amount ({itemsTotalAmount.ToString(CultureInfo.InvariantCulture)})");
                 }
             }
+			_logger.LogDebug("<<< Exiting ValidateReceipt(receipt={Receipt})", receipt);
             return status;
         }
 
         public virtual DeviceStatus ValidateReversalReceipt(ReversalReceipt reversalReceipt)
         {
+			_logger.LogInformation(">>> Entering ValidateReversalReceipt(reversalReceipt={ReversalReceipt})", reversalReceipt);
             var status = ValidateReceipt(reversalReceipt);
             if (!status.Ok)
             {
@@ -305,13 +318,24 @@
                 status.AddError("E405", $"FiscalMemorySerialNumber of the original receipt is empty");
                 return status;
             }
+			_logger.LogDebug("<<< Exiting ValidateReversalReceipt(reversalReceipt={ReversalReceipt})", reversalReceipt);
             return status;
         }
 
         // Native invoice / credit note. The default implementations report "not implemented".
-        public virtual DeviceStatus ValidateInvoice(Invoice invoice) => NotImplemented("Invoice");
+        public virtual DeviceStatus ValidateInvoice(Invoice invoice)
+        {
+            _logger.LogInformation(">>> Entering ValidateInvoice(invoice={Invoice})", invoice);
+            _logger.LogDebug("<<< Exiting ValidateInvoice(invoice={Invoice})", invoice);
+            return NotImplemented("Invoice");
+        }
 
-        public virtual DeviceStatus ValidateCreditNote(CreditNote creditNote) => NotImplemented("Credit note");
+        public virtual DeviceStatus ValidateCreditNote(CreditNote creditNote)
+        {
+            _logger.LogInformation(">>> Entering ValidateCreditNote(creditNote={CreditNote})", creditNote);
+            _logger.LogDebug("<<< Exiting ValidateCreditNote(creditNote={CreditNote})", creditNote);
+            return NotImplemented("Credit note");
+        }
 
         public virtual (ReceiptInfo, DeviceStatus) PrintInvoice(Invoice invoice)
             => (new ReceiptInfo(), NotImplemented("Invoice"));
@@ -327,6 +351,8 @@
         {
             if (!DeviceInfo.SupportsPeriodReport)
             {
+				_logger.LogInformation(">>> Entering ValidatePeriodReport(periodReport={PeriodReport})", periodReport);
+				_logger.LogDebug("<<< Exiting ValidatePeriodReport(periodReport={PeriodReport})", periodReport);
                 return NotImplemented("Period report");
             }
 
@@ -340,6 +366,7 @@
         /// </summary>
         protected static DeviceStatus ValidatePeriodReportBase(PeriodReport periodReport)
         {
+			_logger.LogInformation(">>> Entering ValidatePeriodReportBase(periodReport={PeriodReport})", periodReport);
             var status = new DeviceStatus();
             if (periodReport.StartDate == DateTime.MinValue)
             {
@@ -359,13 +386,16 @@
                 return status;
             }
 
+			_logger.LogDebug("<<< Exiting ValidatePeriodReportBase(periodReport={PeriodReport})", periodReport);
             return status;
         }
 
         protected static DeviceStatus NotImplemented(string documentName)
         {
+			_logger.LogInformation(">>> Entering NotImplemented(documentName={DocumentName})", documentName);
             var status = new DeviceStatus();
             status.AddError("E413", $"{documentName} printing is not implemented by this driver");
+			_logger.LogDebug("<<< Exiting NotImplemented(documentName={DocumentName})", documentName);
             return status;
         }
 
@@ -374,6 +404,7 @@
         /// </summary>
         protected DeviceStatus ValidateInvoiceCore(Invoice invoice)
         {
+			_logger.LogInformation(">>> Entering ValidateInvoiceCore(invoice={Invoice})", invoice);
             var status = ValidateReceipt(invoice);
             if (!status.Ok)
             {
@@ -382,6 +413,7 @@
 
             ValidateInvoiceDocument(status, invoice, Info.InvoiceNumberAssignment, "Invoice");
 
+			_logger.LogDebug("<<< Exiting ValidateInvoiceCore(invoice={Invoice})", invoice);
             return status;
         }
 
@@ -390,6 +422,7 @@
         /// </summary>
         protected DeviceStatus ValidateCreditNoteCore(CreditNote creditNote)
         {
+			_logger.LogInformation(">>> Entering ValidateCreditNoteCore(creditNote={CreditNote})", creditNote);
             var status = ValidateReversalReceipt(creditNote);
             if (!status.Ok)
             {
@@ -403,6 +436,7 @@
                 status.AddError("E405", "OriginalInvoiceNumber of the credit note is empty");
             }
 
+			_logger.LogDebug("<<< Exiting ValidateCreditNoteCore(creditNote={CreditNote})", creditNote);
             return status;
         }
 
@@ -415,6 +449,7 @@
             NumberAssignment numberAssignment,
             string documentName)
         {
+			_logger.LogInformation(">>> Entering ValidateInvoiceDocument(status={Status},document={Document},numberAssignment={NumberAssignment},documentName={DocumentName})", status, document, numberAssignment, documentName);
             var recipient = document.Recipient;
             if (recipient == null)
             {
@@ -453,23 +488,30 @@
             {
                 status.AddError("E412", $"External {documentName.ToLowerInvariant()} number is not supported by this device");
             }
+			_logger.LogDebug("<<< Exiting ValidateInvoiceDocument(status={Status},document={Document},numberAssignment={NumberAssignment},documentName={DocumentName})", status, document, numberAssignment, documentName);
         }
 
 
 
         public virtual DeviceStatus ValidateTransferAmount(TransferAmount transferAmount)
         {
+			_logger.LogInformation(">>> Entering ValidateTransferAmount(transferAmount={TransferAmount})", transferAmount);
             var status = new DeviceStatus();
             if (transferAmount.Amount <= 0)
             {
                 status.AddError("E403", "Amount should be positive number");
             }
+			_logger.LogDebug("<<< Exiting ValidateTransferAmount(transferAmount={TransferAmount})", transferAmount);
             return status;
         }
 
         public DeviceInfo DeviceInfo => Info;
 
-        public void SetDeadLine(DateTime deadLine) => DeadLine = deadLine;
+        public void SetDeadLine(DateTime deadLine)
+        {
+            _logger.LogInformation(">>> Entering SetDeadLine(deadLine={DeadLine})", deadLine);
+            DeadLine = deadLine;
+        }
         public DateTime DeadLine { get; private set; } = DateTime.MaxValue;
     }
 }

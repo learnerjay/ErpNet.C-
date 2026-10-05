@@ -13,6 +13,7 @@
     using ErpNet.FP.Core.Service;
     using ErpNet.FP.Core.Transports;
     using ErpNet.FP.Server.Configuration;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// ServiceSingleton is wrapper around ServiceControllerContext, that
@@ -21,6 +22,7 @@
     /// </summary>
     public class ServiceSingleton : ServiceControllerContext
     {
+	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
         private readonly IWritableOptions<ServiceOptions> _writableConfigOptions;
 
@@ -28,13 +30,16 @@
             IWritableOptions<ServiceOptions> writableConfigOptions)
             : base()
         {
+			_logger.LogInformation(">>> Entering ServiceSingleton(writableConfigOptions={WritableConfigOptions})", writableConfigOptions);
             _writableConfigOptions = writableConfigOptions;
             configOptions = writableConfigOptions.Value;
             Setup();
+			_logger.LogDebug("<<< Exiting ServiceSingleton(writableConfigOptions={WritableConfigOptions})", writableConfigOptions);
         }
 
         protected override void SetupProvider()
         {
+			_logger.LogInformation(">>> Entering SetupProvider()");
             // Transports
             var comTransport = new ComTransport();
             var tcpTransport = new TcpTransport();
@@ -79,10 +84,12 @@
                 .Register(tremolV2Zfp, tcpTransport)
                 // SIS Fiscal Module (JSON-RPC over HTTP)
                 .Register(bgSisJson, httpSisJsonTransport);
+				_logger.LogDebug("<<< Exiting SetupProvider()");
         }
 
         protected override void WriteOptions()
         {
+			_logger.LogInformation(">>> Entering WriteOptions()");
             _writableConfigOptions.Update(updatedConfigOptions =>
             {
                 updatedConfigOptions.AutoDetect = configOptions.AutoDetect;
@@ -93,6 +100,7 @@
                 updatedConfigOptions.PrintersProperties = configOptions.PrintersProperties ?? [];
                 updatedConfigOptions.WebAccess = configOptions.WebAccess;
             });
+			_logger.LogDebug("<<< Exiting WriteOptions()");
         }
     }
 

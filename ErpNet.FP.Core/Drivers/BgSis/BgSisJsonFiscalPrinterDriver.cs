@@ -21,6 +21,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             bool autoDetect = true,
             IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgSisJsonFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"sis.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -51,12 +52,14 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
 
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, string model, string fwChecksum, bool autoDetect)
         {
+			Log.Information(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect})", rawDeviceInfo, model, fwChecksum, autoDetect);
             JObject json;
             try
             {
@@ -87,6 +90,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             }
 
             var (commentMax, itemMax) = GetTextLimitsForModel(model);
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},model={Model},fwChecksum={FwChecksum},autoDetect={AutoDetect})", rawDeviceInfo, model, fwChecksum, autoDetect);
             return new DeviceInfo
             {
                 SerialNumber = fdNumber,
@@ -110,6 +114,8 @@ namespace ErpNet.FP.Core.Drivers.BgSis
         /// </summary>
         protected static (int commentMax, int itemMax) GetTextLimitsForModel(string model)
         {
+			Log.Information(">>> Entering GetTextLimitsForModel(model={Model})", model);
+			Log.Debug("<<< Exiting GetTextLimitsForModel(model={Model})", model);
             return model switch
             {
                 "MF-P1200DN" => (42, 64),

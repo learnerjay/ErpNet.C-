@@ -37,12 +37,15 @@ namespace ErpNet.FP.Core.Transports
         /// </param>
         public HttpTransport(string defaultPath = "", string contentType = "application/octet-stream")
         {
+			Log.Information(">>> Entering HttpTransport(defaultPath={DefaultPath},contentType={ContentType})", defaultPath, contentType);
             _defaultPath = defaultPath;
             _contentType = contentType;
+			Log.Debug("<<< Exiting HttpTransport(defaultPath={DefaultPath},contentType={ContentType})", defaultPath, contentType);
         }
 
         public override IChannel OpenChannel(string address)
         {
+			Log.Information(">>> Entering OpenChannel(address={Address})", address);
             if (_openedChannels.TryGetValue(address, out Channel? channel))
             {
                 return channel;
@@ -50,12 +53,15 @@ namespace ErpNet.FP.Core.Transports
 
             channel = new Channel(address, _defaultPath, _contentType);
             _openedChannels.Add(address, channel);
+			Log.Debug("<<< Exiting OpenChannel(address={Address})", address);
             return channel;
         }
 
         public override void Drop(IChannel channel)
         {
+			Log.Information(">>> Entering Drop(channel={Channel})", channel);
             // HTTP is connectionless; nothing to close.
+			Log.Debug("<<< Exiting Drop(channel={Channel})", channel);
         }
 
         public class Channel : IChannel
@@ -90,6 +96,8 @@ namespace ErpNet.FP.Core.Transports
             /// </summary>
             public byte[] Read()
             {
+				Log.Information(">>> Entering Read()");
+				Log.Debug("<<< Exiting Read()");
                 return _lastResponse;
             }
 
@@ -98,6 +106,7 @@ namespace ErpNet.FP.Core.Transports
             /// </summary>
             public void Write(byte[] data)
             {
+				Log.Information(">>> Entering Write(data={Data})", data);
                 using var content = new ByteArrayContent(data);
                 content.Headers.ContentType = _contentType;
 
@@ -117,6 +126,7 @@ namespace ErpNet.FP.Core.Transports
                 {
                     var errorMessage = $"HTTP error while posting to {_url}: {ex.Message}";
                     Log.Error(errorMessage);
+				Log.Debug("<<< Exiting Write(data={Data})", data);
                     throw new TimeoutException(errorMessage, ex);
                 }
             }

@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -11,6 +12,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDatecsPIslFiscalPrinter : BgIslFiscalPrinter
     {
+	private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
         protected const byte
             CommandDatecsOpenReversalReceipt = 0x2e;
@@ -19,6 +21,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogInformation(">>> Entering OpenReceipt()");
             var header = string.Join(",",
                 new string[] {
                     String.IsNullOrEmpty(operatorId) ?
@@ -32,6 +35,7 @@
                     "1",
                     uniqueSaleNumber
                 });
+			_logger.LogDebug("<<< Exiting OpenReceipt()");
             return Request(CommandOpenFiscalReceipt, header);
         }
 
@@ -46,6 +50,7 @@
             int ItemCode = 999)
         // Protocol [<L1>][<Lf><L2>]<Tab><TaxCd><[Sign]Price>[*<Qwan>][,Perc|;Abs]
         {
+			_logger.LogInformation(">>> Entering AddItem()");
             var itemData = new StringBuilder();
             if (department <= 0) 
             {
@@ -82,22 +87,27 @@
                         priceModifierType == PriceModifierType.DiscountAmount
                         ? -priceModifierValue : priceModifierValue).ToString("F2", CultureInfo.InvariantCulture));
             }
+			_logger.LogDebug("<<< Exiting AddItem()");
             return Request(CommandFiscalReceiptSale, itemData.ToString());
         }
 
         public override (string, DeviceStatus) GetTaxIdentificationNumber()
         {
+			_logger.LogInformation(">>> Entering GetTaxIdentificationNumber()");
             var (response, deviceStatus) = Request(CommandGetTaxIdentificationNumber);
             var commaFields = response.Split(',');
             if (commaFields.Length == 2)
             {
                 return (commaFields[0].Trim(), deviceStatus);
             }
+			_logger.LogDebug("<<< Exiting GetTaxIdentificationNumber()");
             return (string.Empty, deviceStatus);
         }
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogInformation(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "E",
@@ -116,6 +126,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogInformation(">>> Entering OpenReversalReceipt()");
             // Protocol:<OpNum>,<Password>,<TillNum>[,<Invoice><InvNum>][,<UNP>],< StType >< DocNo >[,< StUNP >,< StDT >,< StFMIN >][#<StornoReason>]
             var header = string.Join(",",
                 new string[] {
@@ -134,6 +145,7 @@
                     fiscalMemorySerialNumber
                 });
 
+			_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
             return Request(CommandDatecsOpenReversalReceipt, header);
         }
 
@@ -257,6 +269,7 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogInformation(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
             if (status == null)
             {
@@ -297,6 +310,7 @@
                     }
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 

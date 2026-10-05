@@ -19,7 +19,9 @@ namespace ErpNet.FP.Core.Provider
     {
         public Provider(ServiceOptions serviceOptions)
         {
+			Log.Information(">>> Entering Provider(serviceOptions={ServiceOptions})", serviceOptions);
             this.ServiceOptions = serviceOptions;
+			Log.Debug("<<< Exiting Provider(serviceOptions={ServiceOptions})", serviceOptions);
         }
         /// <summary>
         /// Adds the specified protocol to the provider.
@@ -29,8 +31,10 @@ namespace ErpNet.FP.Core.Provider
         /// <param name="transport">The transport.</param>
         public Provider Register(FiscalPrinterDriver driver, Transport transport)
         {
+			Log.Information(">>> Entering Register(driver={Driver},transport={Transport})", driver, transport);
             var key = driver.DriverName + "." + transport.TransportName;
             protocols.Add(key, (driver, transport));
+			Log.Debug("<<< Exiting Register(driver={Driver},transport={Transport})", driver, transport);
             return this;
         }
 
@@ -39,6 +43,7 @@ namespace ErpNet.FP.Core.Provider
             Transport transport,
             List<FiscalPrinterDriver> drivers)
         {
+			Log.Information(">>> Entering DetectPrinterAsync(channel={Channel},transport={Transport},drivers={Drivers})", channel, transport, drivers);
             IFiscalPrinter? printer = null;
             var unknownDeviceConnectedToChannel = true;
             var positionInList = 1;
@@ -106,6 +111,7 @@ namespace ErpNet.FP.Core.Provider
                 // transport.Drop(channel);   // hangs here if device driver problem occure
             }
             Log.Information($"Probing finished for {channel.Descriptor}.");
+			Log.Debug("<<< Exiting DetectPrinterAsync(channel={Channel},transport={Transport},drivers={Drivers})", channel, transport, drivers);
             return printer;
         }
 
@@ -193,6 +199,7 @@ namespace ErpNet.FP.Core.Provider
         /// <exception cref="InvalidOperationException">When the printer is not found or the URI is not correctly formatted.</exception>
         public IFiscalPrinter Connect(string deviceUri, ServiceOptions serviceOptions, bool autoDetect = true, IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", deviceUri, serviceOptions, autoDetect, options);
             var match = uriPattern.Match(deviceUri);
             if (!match.Success)
                 throw new FormatException(
@@ -218,6 +225,7 @@ namespace ErpNet.FP.Core.Provider
             {
                 var p = driver.Connect(channel, serviceOptions, autoDetect, options);
                 p.DeviceInfo.Uri = uri;
+				Log.Debug("<<< Exiting Connect(deviceUri={DeviceUri},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", deviceUri, serviceOptions, autoDetect, options);
                 return p;
             }
             catch (Exception ex)

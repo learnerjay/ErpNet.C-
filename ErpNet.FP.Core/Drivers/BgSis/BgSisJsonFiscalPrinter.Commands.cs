@@ -31,6 +31,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
         /// </summary>
         protected (JObject json, string raw) RawJsonRequest(JObject request)
         {
+			Log.Information(">>> Entering RawJsonRequest(request={Request})", request);
             var requestText = request.ToString(Formatting.None);
             var requestBytes = JsonEncoding.GetBytes(requestText);
 
@@ -81,8 +82,11 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                     continue;
                 }
 
+				Log.Information(">>> Entering Request()");
+				Log.Debug("<<< Exiting Request()");
                 return (json, responseText);
             }
+			Log.Debug("<<< Exiting RawJsonRequest(request={Request})", request);
         }
 
         /// <summary>
@@ -141,6 +145,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
         /// </summary>
         protected DeviceStatus ParseResponseStatus(JObject json)
         {
+			Log.Information(">>> Entering ParseResponseStatus(json={Json})", json);
             var status = new DeviceStatus();
 
             // JSON-RPC level error object
@@ -216,11 +221,13 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                     $"NRA error {lastNraErr.Value}: {json.Value<string>("lastNRAErrText") ?? string.Empty}");
             }
 
+			Log.Debug("<<< Exiting ParseResponseStatus(json={Json})", json);
             return status;
         }
 
         protected void MapPrinterStatus(DeviceStatus status, string prnStatus)
         {
+			Log.Information(">>> Entering MapPrinterStatus(status={Status},prnStatus={PrnStatus})", status, prnStatus);
             switch (prnStatus.Replace(" ", string.Empty).ToUpperInvariant())
             {
                 case "PAPEREND":
@@ -252,10 +259,12 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                     status.AddInfo($"PRN: {prnStatus}");
                     break;
             }
+			Log.Debug("<<< Exiting MapPrinterStatus(status={Status},prnStatus={PrnStatus})", status, prnStatus);
         }
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			Log.Information(">>> Entering ParseStatus(status={Status})", status);
             if (status == null || status.Length == 0)
             {
                 return new DeviceStatus();
@@ -270,12 +279,14 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 var s = new DeviceStatus();
                 s.AddError("E999", "Cannot parse device status");
 
+				Log.Debug("<<< Exiting ParseStatus(status={Status})", status);
                 return s;
             }
         }
 
         protected JObject BuildReceiptParams(Receipt receipt, ReversalReceipt? reversal)
         {
+			Log.Information(">>> Entering BuildReceiptParams(receipt={Receipt},reversal={Reversal})", receipt, reversal);
             var begin = new JObject();
             if (int.TryParse(receipt.Operator, out var operatorNumber))
             {
@@ -391,6 +402,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             if (footer.Count > 0)
                 prms["textAfterPayment"] = footer;
 
+			Log.Debug("<<< Exiting BuildReceiptParams(receipt={Receipt},reversal={Reversal})", receipt, reversal);
             return prms;
         }
 
@@ -399,6 +411,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
         /// </summary>
         protected JObject BuildInvoiceData(IInvoiceDocument document)
         {
+			Log.Information(">>> Entering BuildInvoiceData(document={Document})", document);
             var recipient = document.Recipient
                 ?? throw new StandardizedStatusMessageException("Invoice requires a \"recipient\"", "E405");
 
@@ -429,6 +442,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 data["vatIdentNumber"] = recipient.VatNumber;
             }
 
+			Log.Debug("<<< Exiting BuildInvoiceData(document={Document})", document);
             return data;
         }
 
@@ -439,6 +453,8 @@ namespace ErpNet.FP.Core.Drivers.BgSis
         /// </summary>
         protected static int GetIdentifierTypeCode(IdentifierType identifierType)
         {
+			Log.Information(">>> Entering GetIdentifierTypeCode(identifierType={IdentifierType})", identifierType);
+			Log.Debug("<<< Exiting GetIdentifierTypeCode(identifierType={IdentifierType})", identifierType);
             return identifierType switch
             {
                 IdentifierType.LegalRegistration => 0,
@@ -451,6 +467,7 @@ namespace ErpNet.FP.Core.Drivers.BgSis
 
         protected JObject BuildSaleItem(Item item)
         {
+			Log.Information(">>> Entering BuildSaleItem(item={Item})", item);
             var quantity = item.Quantity == 0m ? 1m : item.Quantity;
             var jItem = new JObject
             {
@@ -480,11 +497,13 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 jItem["surchargeAmount"] = amount.ToString(CultureInfo.InvariantCulture);
             }
 
+			Log.Debug("<<< Exiting BuildSaleItem(item={Item})", item);
             return jItem;
         }
 
         protected JArray BuildPayments(Receipt receipt, bool isReversal)
         {
+			Log.Information(">>> Entering BuildPayments(receipt={Receipt},isReversal={IsReversal})", receipt, isReversal);
             var payments = new JArray();
 
             // Reversal receipts only accept cash; when no payments are given, pay the full total in cash.
@@ -527,11 +546,13 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 }
             }
 
+			Log.Debug("<<< Exiting BuildPayments(receipt={Receipt},isReversal={IsReversal})", receipt, isReversal);
             return payments;
         }
 
         protected static decimal ComputeTotal(Receipt receipt)
         {
+			Log.Information(">>> Entering ComputeTotal(receipt={Receipt})", receipt);
             var total = 0m;
             if (receipt.Items != null)
             {
@@ -574,24 +595,30 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 }
             }
 
+			Log.Debug("<<< Exiting ComputeTotal(receipt={Receipt})", receipt);
             return Math.Round(total, 2, MidpointRounding.AwayFromZero);
         }
 
         // SIS storno timestamp format: "ss,mm,hh;DD,MM,YY"
         protected static string FormatStornoDate(DateTime dt)
         {
+			Log.Information(">>> Entering FormatStornoDate(dt={Dt})", dt);
+			Log.Debug("<<< Exiting FormatStornoDate(dt={Dt})", dt);
             return dt.ToString("ss,mm,HH;dd,MM,yy", CultureInfo.InvariantCulture);
         }
 
         // SIS fiscal memory report date format: "DD/MM/YY"
         protected static string FormatPeriodReportDate(DateTime dt)
         {
+			Log.Information(">>> Entering FormatPeriodReportDate(dt={Dt})", dt);
+			Log.Debug("<<< Exiting FormatPeriodReportDate(dt={Dt})", dt);
             return dt.ToString("dd/MM/yy", CultureInfo.InvariantCulture);
         }
 
         // SIS receipt timestamp format (printReceipt answer): "ss,mm,hh;DD,MM,YY"
         protected static bool TryParseReceiptTimestamp(string ts, out DateTime dt)
         {
+			Log.Information(">>> Entering TryParseReceiptTimestamp(ts={Ts})", ts);
             dt = default;
             var parts = ts.Split(';');
             if (parts.Length != 2)
@@ -620,12 +647,14 @@ namespace ErpNet.FP.Core.Drivers.BgSis
             }
             catch
             {
+				Log.Debug("<<< Exiting TryParseReceiptTimestamp(ts={Ts})", ts);
                 return false;
             }
         }
 
         public (string raw, DeviceStatus status) GetRawDeviceInfo()
         {
+			Log.Information(">>> Entering GetRawDeviceInfo()");
             var (_, raw) = RawJsonRequest(new JObject
             {
                 ["jsonrpc"] = "2.0",
@@ -633,12 +662,15 @@ namespace ErpNet.FP.Core.Drivers.BgSis
                 ["method"] = "getMfcInfo"
             });
 
+			Log.Debug("<<< Exiting GetRawDeviceInfo()");
             return (raw, new DeviceStatus());
         }
 
         public (string model, string fwChecksum) GetModelAndChecksum()
         {
+			Log.Information(">>> Entering GetModelAndChecksum()");
             var (json, _) = Request("getStatus");
+			Log.Debug("<<< Exiting GetModelAndChecksum()");
             return (json.Value<string>("printerModel") ?? string.Empty,
                     json.Value<string>("fwChecksum") ?? string.Empty);
         }

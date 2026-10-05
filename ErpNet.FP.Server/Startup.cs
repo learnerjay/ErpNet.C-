@@ -24,16 +24,19 @@
 
         public Startup(IConfiguration configuration)
         {
+			Log.Information(">>> Entering Startup(configuration={Configuration})", configuration);
             Configuration = configuration;
 
             _webAccessOptions = Configuration.GetSection("ErpNet.FP:WebAccess").Get<WebAccessOptions>()
                 ?? new WebAccessOptions();
+				Log.Debug("<<< Exiting Startup(configuration={Configuration})", configuration);
         }
 
         public IConfiguration Configuration { get; }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+			Log.Information(">>> Entering Configure(app={App},env={Env})", app, env);
             app.UseDefaultFiles();
 
             var customContentProvider = new FileExtensionContentTypeProvider();
@@ -83,10 +86,12 @@
             {
                 endpoints.MapControllers();
             });
+			Log.Debug("<<< Exiting Configure(app={App},env={Env})", app, env);
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
+			Log.Information(">>> Entering ConfigureServices(services={Services})", services);
             services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog(dispose: true));
 
             services.ConfigureWritable<ServiceOptions>(Configuration.GetSection("ErpNet.FP"));
@@ -118,6 +123,7 @@
             });
 
             services.AddHostedService<KeepAliveHostedService>();
+			Log.Debug("<<< Exiting ConfigureServices(services={Services})", services);
         }
     }
 }

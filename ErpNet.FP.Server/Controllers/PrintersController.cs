@@ -7,17 +7,21 @@
     using ErpNet.FP.Core.Drivers;
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
+	using Microsoft.Extensions.Logging;
 
     // PrintersController, example: //host/printers/[controller]
     [Route("[controller]")]
     [ApiController]
     public class PrintersController : ControllerBase
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         private readonly IServiceController context;
 
         public PrintersController(IServiceController context)
         {
+			_logger.LogInformation(">>> Entering PrintersController(context={Context})", context);
             this.context = context;
+			_logger.LogDebug("<<< Exiting PrintersController(context={Context})", context);
         }
 
         // GET /
@@ -35,6 +39,7 @@
         [HttpGet("{id}")]
         public ActionResult<DeviceInfo> Info(string id)
         {
+			_logger.LogInformation(">>> Entering Info(id={Id})", id);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -43,6 +48,7 @@
             {
                 return deviceInfo;
             }
+			_logger.LogDebug("<<< Exiting Info(id={Id})", id);
             return NotFound();
         }
 
@@ -50,6 +56,7 @@
         [HttpGet("{id}/status")]
         public ActionResult<DeviceStatusWithDateTime> Status(string id)
         {
+			_logger.LogInformation(">>> Entering Status(id={Id})", id);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -58,6 +65,7 @@
             {
                 return printer.CheckStatus();
             }
+			_logger.LogDebug("<<< Exiting Status(id={Id})", id);
             return NotFound();
         }
 
@@ -69,6 +77,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering Cash(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -87,6 +96,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting Cash(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -94,6 +104,8 @@
         [HttpGet("taskinfo")]
         public ActionResult<TaskInfoResult> TaskInfo([FromQuery]string id)
         {
+			_logger.LogInformation(">>> Entering TaskInfo(id={Id})", id);
+			_logger.LogDebug("<<< Exiting TaskInfo(id={Id})", id);
             return context.GetTaskInfo(id);
         }
 
@@ -106,6 +118,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering RawRequest(id={Id},requestFrame={RequestFrame},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, requestFrame, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -124,6 +137,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting RawRequest(id={Id},requestFrame={RequestFrame},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, requestFrame, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -136,6 +150,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintReceipt(id={Id},receipt={Receipt},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, receipt, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -154,6 +169,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintReceipt(id={Id},receipt={Receipt},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, receipt, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -166,6 +182,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintReversalReceipt(id={Id},reversalReceipt={ReversalReceipt},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, reversalReceipt, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -184,6 +201,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintReversalReceipt(id={Id},reversalReceipt={ReversalReceipt},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, reversalReceipt, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -196,6 +214,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintInvoice(id={Id},invoice={Invoice},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, invoice, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -217,6 +236,7 @@
                 return Ok(result);
             }
 
+			_logger.LogDebug("<<< Exiting PrintInvoice(id={Id},invoice={Invoice},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, invoice, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -229,6 +249,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintCreditNote(id={Id},creditNote={CreditNote},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, creditNote, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -250,6 +271,7 @@
                 return Ok(result);
             }
 
+			_logger.LogDebug("<<< Exiting PrintCreditNote(id={Id},creditNote={CreditNote},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, creditNote, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -262,6 +284,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintWithdraw(id={Id},withdraw={Withdraw},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, withdraw, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -280,6 +303,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintWithdraw(id={Id},withdraw={Withdraw},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, withdraw, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -292,6 +316,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintDeposit(id={Id},deposit={Deposit},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, deposit, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -310,6 +335,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintDeposit(id={Id},deposit={Deposit},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, deposit, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -322,6 +348,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering SetDateTime(id={Id},datetime={Datetime},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, datetime, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -340,6 +367,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting SetDateTime(id={Id},datetime={Datetime},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, datetime, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -351,6 +379,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintZReport(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -369,6 +398,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintZReport(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -380,6 +410,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintXReport(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -398,6 +429,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintXReport(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -410,6 +442,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintPeriodReport(id={Id},periodReport={PeriodReport},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, periodReport, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -431,6 +464,7 @@
                 return Ok(result);
             }
 
+			_logger.LogDebug("<<< Exiting PrintPeriodReport(id={Id},periodReport={PeriodReport},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, periodReport, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -442,6 +476,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering PrintDuplicate(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -460,6 +495,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting PrintDuplicate(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             return NotFound();
         }
 
@@ -471,6 +507,7 @@
             [FromQuery] string? timeout,
             [FromQuery] int asyncTimeout = PrintJob.DefaultTimeout)
         {
+			_logger.LogInformation(">>> Entering Reset(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             if (!context.IsReady)
             {
                 return StatusCode(StatusCodes.Status405MethodNotAllowed);
@@ -489,6 +526,7 @@
                     });
                 return Ok(result);
             }
+			_logger.LogDebug("<<< Exiting Reset(id={Id},taskId={TaskId},timeout={Timeout},asyncTimeout={AsyncTimeout})", id, taskId, timeout, asyncTimeout);
             return NotFound();
         }
     }

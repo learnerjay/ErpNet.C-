@@ -55,6 +55,7 @@
 
         public static void EnsureAppSettingsJson(string pathToContentRoot)
         {
+			Log.Information(">>> Entering EnsureAppSettingsJson(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
             var appSettingsJsonFilePath = Path.Combine(pathToContentRoot, AppSettingsFileName);
 
             if (!File.Exists(appSettingsJsonFilePath))
@@ -62,10 +63,13 @@
                 var defaultAppSettings = @"{ ""ErpNet.FP"": {""AutoDetect"": true, ""Printers"": { } }, ""Kestrel"": { ""EndPoints"": { ""Http"": { ""Url"": ""http://0.0.0.0:8001"" } } } }";
                 File.WriteAllText(appSettingsJsonFilePath, defaultAppSettings);
             }
+			Log.Debug("<<< Exiting EnsureAppSettingsJson(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
         }
 
         private static Task EnsureDebugLogHistoryInBackground(string pathToContentRoot, CancellationToken ct)
         {
+			Log.Information(">>> Entering EnsureDebugLogHistoryInBackground(pathToContentRoot={PathToContentRoot},ct={Ct})", pathToContentRoot, ct);
+			Log.Debug("<<< Exiting EnsureDebugLogHistoryInBackground(pathToContentRoot={PathToContentRoot},ct={Ct})", pathToContentRoot, ct);
             return Task.Run(async () =>
             {
                 while (!ct.IsCancellationRequested)
@@ -88,6 +92,7 @@
 
         private static string EnsureDebugLogHistory(string pathToContentRoot)
         {
+			Log.Information(">>> Entering EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
             var debugLogFolder = Path.Combine(pathToContentRoot, "wwwroot", "debug");
             var debugLogFilePath = Path.Combine(debugLogFolder, DebugLogFileName);
             Directory.CreateDirectory(debugLogFolder);
@@ -114,13 +119,16 @@
                 }
                 
             }
+			Log.Debug("<<< Exiting EnsureDebugLogHistory(pathToContentRoot={PathToContentRoot})", pathToContentRoot);
             return debugLogFilePath;
         }
 
         public static string GetVersion()
         {
+			Log.Information(">>> Entering GetVersion()");
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
+			Log.Debug("<<< Exiting GetVersion()");
             return (version != null) ? version.ToString() : "unknown";
         }
 
@@ -183,6 +191,7 @@
             catch (Exception ex)
             {
                 Console.WriteLine($"Error while creating debug.log file: {ex.Message}");
+				Log.Debug("<<< Exiting Main(args={Args})", args);
                 return 1;
             }
             finally

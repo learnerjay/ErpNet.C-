@@ -1,4 +1,5 @@
-﻿var availablePrinters = {}
+﻿var logger = (typeof logger !== 'undefined' && logger) || console;
+var availablePrinters = {}
 var availablePaymentTypes = ['cash', 'check', 'coupons', 'ext-coupons', 'packaging', 'internal-usage', 'damage', 'card', 'bank', 'reserved1', 'reserved2'];
 var availablePrinterConstantsNames = ['itemTextMaxLength', 'commentTextMaxLength'];
 // use positional matching of availablePrinterOptions, hintsForPrinterOptions, useOfPrinterOptions and displayTextsForPrinterOptions
@@ -9,6 +10,7 @@ var displayTextsForPrinterOptions = ['Automatically Activate Payment Terminal'];
 var printerProperties = {}
 
 function showAvailablePrinters() {
+	logger.info('>>> Entering showAvailablePrinters()', { "event.action": "showAvailablePrinters" });
     $.ajax({
         type: 'GET',
         url: '/printers',
@@ -17,6 +19,7 @@ function showAvailablePrinters() {
         timeout: 0,
         context: $('#PrintersList'),
         success: function (data) {
+			logger.info(`>>> Entering success(data=${data})`, { "event.action": "success", "logrite.data": data });
             availablePrinters = data
             if (!printerProperties)
                 getPrinterProperties()
@@ -146,25 +149,34 @@ function showAvailablePrinters() {
             }
             var printersCount = Object.keys(data).length
             this.append('<p>Available ' + printersCount + ' printer(s).</p>')
+			logger.debug(`<<< Exiting success(data=${data})`, { "event.action": "success", "logrite.data": data });
         },
         error: function(xhr, type) {
+			logger.info(`>>> Entering error(xhr=${xhr},type=${type})`, { "event.action": "error", "logrite.xhr": xhr, "logrite.type": type });
             // wait more time
+			logger.debug('<<< Exiting showAvailablePrinters()', { "event.action": "showAvailablePrinters" });
             setTimeout(function() { showAvailablePrinters() }, 3000);
+			logger.debug(`<<< Exiting error(xhr=${xhr},type=${type})`, { "event.action": "error", "logrite.xhr": xhr, "logrite.type": type });
         }
     })
 }
 
 function getPrinterProperties(serialNumber) {
+	logger.info(`>>> Entering getPrinterProperties(serialNumber=${serialNumber})`, { "event.action": "getPrinterProperties" });
     for (var pi in printerProperties) {
         var properties = printerProperties[pi]
         if (properties.printerSerialNumber == serialNumber) {
             return properties
         }
     }
+	logger.debug(`<<< Exiting getPrinterProperties(serialNumber=${serialNumber})`, { "event.action": "getPrinterProperties" });
+	logger.info('>>> Entering getPrinterProperties()', { "event.action": "getPrinterProperties" });
+	logger.debug('<<< Exiting getPrinterProperties()', { "event.action": "getPrinterProperties" });
     return {}
 }
 
 function applyChanges(serialNumber) {
+	logger.info(`>>> Entering applyChanges(serialNumber=${serialNumber})`, { "event.action": "applyChanges", "logrite.serialNumber": serialNumber });
     //printerProperties[serialNumber] = {
     //    paymentTypeMappings: {},
     //    printerConstants: {},
@@ -195,6 +207,7 @@ function applyChanges(serialNumber) {
         }
         else {
             printerProperties[serialNumber].printerOptions[printerOptionName] = "False";
+			logger.debug(`<<< Exiting applyChanges(serialNumber=${serialNumber})`, { "event.action": "applyChanges", "logrite.serialNumber": serialNumber });
         }
     }
     console.log("props", printerProperties)
@@ -211,11 +224,14 @@ function applyChanges(serialNumber) {
         },
         error: function (xhr, type) {
             showToastMessage("Cannot apply changes to the printers properties.")
+			logger.info('>>> Entering detectAvailablePrinters()', { "event.action": "detectAvailablePrinters" });
+			logger.debug('<<< Exiting detectAvailablePrinters()', { "event.action": "detectAvailablePrinters" });
         }
     })
 }
 
 function autoDetectChanged() {
+	logger.info('>>> Entering autoDetectChanged()', { "event.action": "autoDetectChanged" });
     $.ajax({
         type: 'GET',
         url: '/service/toggleautodetect',
@@ -232,9 +248,11 @@ function autoDetectChanged() {
             showToastMessage("Cannot change auto detect mode.")
         }
     })
+	logger.debug('<<< Exiting autoDetectChanged()', { "event.action": "autoDetectChanged" });
 }
 
 function excludePortsChanged() {
+	logger.info('>>> Entering excludePortsChanged()', { "event.action": "excludePortsChanged" });
     var excludePortListValue = document.getElementById("ExcludePortList").value;
     $.ajax({
         type: 'POST',
@@ -252,9 +270,11 @@ function excludePortsChanged() {
             showToastMessage("Cannot update exclude ports list.")
         }
     })
+	logger.debug('<<< Exiting excludePortsChanged()', { "event.action": "excludePortsChanged" });
 }
 
 function detectionTimeoutChanged() {   
+	logger.info('>>> Entering detectionTimeoutChanged()', { "event.action": "detectionTimeoutChanged" });
     var detectionTimeoutValue = document.getElementById("DetectionTimeout").value;
     $.ajax({
         type: 'POST',
@@ -270,11 +290,15 @@ function detectionTimeoutChanged() {
         },
         error: function (xhr, type) {
             showToastMessage("Cannot update detection timeout.")
+			logger.info('>>> Entering error()', { "event.action": "error", "logrite.xhr": xhr, "logrite.type": type });
+			logger.debug('<<< Exiting error()', { "event.action": "error", "logrite.xhr": xhr, "logrite.type": type });
         }
     })
+	logger.debug('<<< Exiting detectionTimeoutChanged()', { "event.action": "detectionTimeoutChanged" });
 }
 
 function saveWebAccess() {
+	logger.info('>>> Entering saveWebAccess()', { "event.action": "saveWebAccess" });
     var origins = $("#AllowedOrigins").val().split(',').map(s => s.trim()).filter(s => s.length > 0);
     var enablePrivate = $("#EnablePrivateNetwork").is(':checked');
 
@@ -293,9 +317,11 @@ function saveWebAccess() {
             showToastMessage("Error saving web access settings.");
         }
     });
+	logger.debug('<<< Exiting saveWebAccess()', { "event.action": "saveWebAccess" });
 }
 
 function showConfiguredPrinters() {
+	logger.info('>>> Entering showConfiguredPrinters()', { "event.action": "showConfiguredPrinters" });
     $.ajax({
         type: 'GET',
         url: '/service/printers',
@@ -323,6 +349,7 @@ function showConfiguredPrinters() {
             this.append('<p>Configured ' + printersCount + ' printer(s).</p>')
         },
         error: function (xhr, type) {
+			logger.debug('<<< Exiting showConfiguredPrinters()', { "event.action": "showConfiguredPrinters" });
             // wait more time
             setTimeout(function() { showConfiguredPrinters() }, 3000);
         }
@@ -330,6 +357,7 @@ function showConfiguredPrinters() {
 }
 
 function getServerVariables() {
+	logger.info('>>> Entering getServerVariables()', { "event.action": "getServerVariables" });
     $.ajax({
         type: 'GET',
         url: '/service/vars',
@@ -354,6 +382,7 @@ function getServerVariables() {
             showToastMessage("Cannot get server variables.")
         }
     })
+	logger.debug('<<< Exiting getServerVariables()', { "event.action": "getServerVariables" });
 }
 
 function getPrinterProperties() {
@@ -374,6 +403,7 @@ function getPrinterProperties() {
 }
 
 function detectAvailablePrinters() {
+	logger.info('>>> Entering detectAvailablePrinters()', { "event.action": "detectAvailablePrinters" });
     availablePrinters = {}
     $("#DetectButton").attr("disabled", "disabled")
     $('#PrintersList').html('<div class="spinner primary"></div>Detecting...')
@@ -396,11 +426,14 @@ function detectAvailablePrinters() {
 }
 
 function showPrinters() {
+	logger.info('>>> Entering showPrinters()', { "event.action": "showPrinters" });
     showAvailablePrinters()
     showConfiguredPrinters()
+	logger.debug('<<< Exiting showPrinters()', { "event.action": "showPrinters" });
 }
 
 function configurePrinter() {
+	logger.info('>>> Entering configurePrinter()', { "event.action": "configurePrinter" });
     $("#NewPrinterModal").prop('checked', false)
     $.ajax({
         type: 'POST',
@@ -419,9 +452,11 @@ function configurePrinter() {
             showToastMessage("Cannot configure the new printer.")
         }
     })
+	logger.debug('<<< Exiting configurePrinter()', { "event.action": "configurePrinter" });
 }
 
 function deletePrinter(printerId, printerUri) {
+	logger.info(`>>> Entering deletePrinter(printerId=${printerId},printerUri=${printerUri})`, { "event.action": "deletePrinter", "logrite.printerId": printerId, "logrite.printerUri": printerUri });
     $.ajax({
         type: 'POST',
         url: '/service/printers/delete',
@@ -439,9 +474,11 @@ function deletePrinter(printerId, printerUri) {
             showToastMessage("Cannot delete the printer configuration.")
         }
     })
+	logger.debug(`<<< Exiting deletePrinter(printerId=${printerId},printerUri=${printerUri})`, { "event.action": "deletePrinter", "logrite.printerId": printerId, "logrite.printerUri": printerUri });
 }
 
 function saveSettingsForPrinter(printerId) {
+	logger.info(`>>> Entering saveSettingsForPrinter(printerId=${printerId})`, { "event.action": "saveSettingsForPrinter", "logrite.printerId": printerId });
     $.ajax({
         type: 'POST',
         url: '/service/printers/delete',
@@ -474,9 +511,11 @@ function saveSettingsForPrinter(printerId) {
             showToastMessage("Cannot delete the old settings.")
         }
     })
+	logger.debug(`<<< Exiting saveSettingsForPrinter(printerId=${printerId})`, { "event.action": "saveSettingsForPrinter", "logrite.printerId": printerId });
 }
 
 function syncTime(printerId) {
+	logger.info(`>>> Entering syncTime(printerId=${printerId})`, { "event.action": "syncTime", "logrite.printerId": printerId });
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/datetime',
@@ -502,9 +541,11 @@ function syncTime(printerId) {
             showToastMessage("Cannot sync printer's time.")
         }
     })
+	logger.debug(`<<< Exiting syncTime(printerId=${printerId})`, { "event.action": "syncTime", "logrite.printerId": printerId });
 }
 
 function printDuplicate(printerId) {
+	logger.info(`>>> Entering printDuplicate(printerId=${printerId})`, { "event.action": "printDuplicate", "logrite.printerId": printerId });
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/duplicate',
@@ -530,9 +571,11 @@ function printDuplicate(printerId) {
             showToastMessage("Cannot print duplicate of the last fiscal receipt.")
         }
     })
+	logger.debug(`<<< Exiting printDuplicate(printerId=${printerId})`, { "event.action": "printDuplicate", "logrite.printerId": printerId });
 }
 
 function printZReport(printerId) {
+	logger.info(`>>> Entering printZReport(printerId=${printerId})`, { "event.action": "printZReport", "logrite.printerId": printerId });
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/zreport',
@@ -558,9 +601,11 @@ function printZReport(printerId) {
             showToastMessage("Cannot print the Z-Report.")
         }
     })
+	logger.debug(`<<< Exiting printZReport(printerId=${printerId})`, { "event.action": "printZReport", "logrite.printerId": printerId });
 }
 
 function printPeriodReport(printerId) {
+	logger.info(`>>> Entering printPeriodReport(printerId=${printerId})`, { "event.action": "printPeriodReport", "logrite.printerId": printerId });
     var startDate = $('#period-start-' + printerId).val()
     var endDate = $('#period-end-' + printerId).val()
     if (!startDate || !endDate) {
@@ -600,9 +645,11 @@ function printPeriodReport(printerId) {
             showToastMessage("Cannot print the period report.")
         }
     })
+	logger.debug(`<<< Exiting printPeriodReport(printerId=${printerId})`, { "event.action": "printPeriodReport", "logrite.printerId": printerId });
 }
 
 function printXReport(printerId) {
+	logger.info(`>>> Entering printXReport(printerId=${printerId})`, { "event.action": "printXReport", "logrite.printerId": printerId });
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/xreport',
@@ -628,9 +675,11 @@ function printXReport(printerId) {
             showToastMessage("Cannot print the X-Report.")
         }
     })
+	logger.debug(`<<< Exiting printXReport(printerId=${printerId})`, { "event.action": "printXReport", "logrite.printerId": printerId });
 }
 
 function resetPrinter(printerId) {
+	logger.info(`>>> Entering resetPrinter(printerId=${printerId})`, { "event.action": "resetPrinter", "logrite.printerId": printerId });
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/reset',
@@ -656,9 +705,11 @@ function resetPrinter(printerId) {
             showToastMessage("Cannot reset the printer.")
         }
     })
+	logger.debug(`<<< Exiting resetPrinter(printerId=${printerId})`, { "event.action": "resetPrinter", "logrite.printerId": printerId });
 }
 
 function protocolSelected(protocolTemplate) {
+	logger.info(`>>> Entering protocolSelected(protocolTemplate=${protocolTemplate})`, { "event.action": "protocolSelected", "logrite.protocolTemplate": protocolTemplate });
     var delimiter = "://"
     var oldValue = $("#NewPrinterUri").val()
     if (oldValue) {
@@ -670,12 +721,15 @@ function protocolSelected(protocolTemplate) {
     } else {
         $("#NewPrinterUri").val(protocolTemplate)
     }
+		logger.debug(`<<< Exiting protocolSelected(protocolTemplate=${protocolTemplate})`, { "event.action": "protocolSelected", "logrite.protocolTemplate": protocolTemplate });
 }
 
 function showToastMessage(msg) {
+	logger.info(`>>> Entering showToastMessage(msg=${msg})`, { "event.action": "showToastMessage", "logrite.msg": msg });
     var toastArea = $("#ToastArea")
     toastArea.html('<span class="toast">' + msg + '</span>')
     setTimeout(function () { toastArea.html(""); }, 3000);
+	logger.debug(`<<< Exiting showToastMessage(msg=${msg})`, { "event.action": "showToastMessage", "logrite.msg": msg });
 }
 
 $(function () {
