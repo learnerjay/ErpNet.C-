@@ -39,6 +39,8 @@
 
         protected virtual byte[] ByteTo2Bytes(UInt16 word)
         {
+			Log.Information(">>> Entering ByteTo2Bytes(word={Word})", word);
+            Log.Debug("<<< Exiting ByteTo2Bytes(word={Word})", word);
             return new byte[]{
                 (byte)((word >> 4 & 0x0f) + 0x30),
                 (byte)((word >> 0 & 0x0f) + 0x30)
@@ -46,16 +48,19 @@
         }
         protected virtual byte[] ComputeCS(byte[] fragment)
         {
+			Log.Information(">>> Entering ComputeCS(fragment={Fragment})", fragment);
             byte bccSum = 0;
             foreach (byte b in fragment)
             {
                 bccSum ^= b;
             }
+			Log.Debug("<<< Exiting ComputeCS(fragment={Fragment})", fragment);
             return ByteTo2Bytes(bccSum);
         }
 
         protected virtual byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			Log.Information(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -75,13 +80,16 @@
             frame.AddRange(ComputeCS(frame.Skip(1).ToArray()));
             frame.Add(MarkerETX);
 
+			Log.Debug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
         protected void WaitForDeviceToBeReady()
         {
+			Log.Information(">>> Entering WaitForDeviceToBeReady()");
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
 
+			Log.Debug("WaitForDeviceToBeReady(): deviceDescriptor → {DeviceDescriptor}", deviceDescriptor);
             for (; ; )
             {
                 byte[]? buffer = null;
@@ -105,6 +113,7 @@
                     {
                         buffer = Channel.Read();
                         Log.Information($"{deviceDescriptor} >>> Pong: {BitConverter.ToString(buffer)}");
+						Log.Debug("WaitForDeviceToBeReady(): buffer → {Buffer}", buffer);
                         break;
                     }
                     catch (TimeoutException)
@@ -123,6 +132,7 @@
                 }
                 if (buffer == null || buffer.Length == 0)
                 {
+					Log.Error("Throwing TimeoutException from WaitForDeviceToBeReady()");
                     throw new TimeoutException("ping timeout");
                 }
                 var b = buffer[0];
@@ -135,6 +145,7 @@
                         continue; // continue with the loop waiting to be Ready
                     case PingAnswerErrorOutOfPaper:
                     case PingAnswerErrorOutOfPaperAndBusy:
+						Log.Error("Throwing StandardizedStatusMessageException from WaitForDeviceToBeReady()");
                         throw new StandardizedStatusMessageException("Out of paper", "E301");
                     case PingAnswerErrorOverheated:
                     case PingAnswerErrorOverheatedAndBusy:
@@ -150,20 +161,25 @@
                         throw new StandardizedStatusMessageException("Wrong password", "E408");
                     default:
                         // Unknown ping reply code. Break the loop.
+						Log.Error("Throwing InvalidResponseException from WaitForDeviceToBeReady()");
                         throw new InvalidResponseException("invalid ping reply code");
                 }
             }
+			Log.Debug("<<< Exiting WaitForDeviceToBeReady()");
             throw new TimeoutException("ping timeout");
         }
 
         protected virtual byte[]? RawRequest(byte command, byte[]? data)
         {
+			Log.Information(">>> Entering RawRequest(command={Command},data={Data})", command, data);
             var deviceDescriptor = string.IsNullOrEmpty(DeviceInfo.Uri) ? Channel.Descriptor : DeviceInfo.Uri;
 
+			Log.Debug("RawRequest(command={Command},data={Data}): deviceDescriptor → {DeviceDescriptor}", command, data, deviceDescriptor);
             FrameSequenceNumber++;
             if (FrameSequenceNumber > MaxSequenceNumber)
             {
                 FrameSequenceNumber = 0;
+				Log.Debug("RawRequest(command={Command},data={Data}): FrameSequenceNumber → {FrameSequenceNumber}", command, data, FrameSequenceNumber);
             }
             // Wait for device to be ready
             // It will generate exception if there is read timeout
@@ -178,6 +194,7 @@
             }
 
             var request = BuildHostFrame(command, data);
+			Log.Debug("RawRequest(command={Command},data={Data}): request → {Request}", command, data, request);
             for (var w = 0; w < MaxWriteRetries; w++)
             {
                 // Write request frame
@@ -194,7 +211,9 @@
 
                 // Read response frames.
                 var currentFrame = new List<byte>();
+				Log.Debug("RawRequest(command={Command},data={Data}): currentFrame → {CurrentFrame}", command, data, currentFrame);
                 var maxReadRetries = IsLongRunningCommand(command) ? MaxReadRetriesLongRunning : MaxReadRetries;
+				Log.Debug("RawRequest(command={Command},data={Data}): maxReadRetries → {MaxReadRetries}", command, data, maxReadRetries);
                 for (var r = 0; r < maxReadRetries; r++)
                 {
                     byte[] buffer;
@@ -213,6 +232,7 @@
                     Log.Information($"{deviceDescriptor} >>> {BitConverter.ToString(buffer)}");
 
                     var readFrames = new List<List<byte>>();
+					Log.Debug("RawRequest(command={Command},data={Data}): readFrames → {ReadFrames}", command, data, readFrames);
                     foreach (var b in buffer)
                     {
                         currentFrame.Add(b);
@@ -260,30 +280,39 @@
                     }
                     if (buffer.Count() > 0 && buffer[0] == 0)
                     {
+						Log.Error("Throwing InvalidResponseException from RawRequest(command={Command},data={Data})", command, data);
                         throw new InvalidResponseException("The response is invalid. Probably the communication speed not match or the device is not a fiscal device!");
                     }
                 }
             }
+			Log.Information(">>> Entering Request(command={Command},data={Data})", command, data);
+			Log.Debug("<<< Exiting Request(command={Command},data={Data})", command, data);
+			Log.Debug("<<< Exiting RawRequest(command={Command},data={Data})", command, data);
             return null;
         }
 
         protected virtual (string, DeviceStatus) ParseResponse(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseResponse(rawResponse={RawResponse})", rawResponse);
             var (response, status) = ParseResponseAsByteArray(rawResponse);
             if (response == null)
             {
                 return ("", status);
             }
+			Log.Debug("<<< Exiting ParseResponse(rawResponse={RawResponse})", rawResponse);
             return (PrinterEncoding.GetString(response), status);
         }
 
         protected virtual (byte[]?, DeviceStatus) ParseResponseAsByteArray(byte[]? rawResponse)
         {
+			Log.Information(">>> Entering ParseResponseAsByteArray(rawResponse={RawResponse})", rawResponse);
             if (rawResponse == null)
             {
+				Log.Error("Throwing InvalidResponseException from ParseResponseAsByteArray(rawResponse={RawResponse})", rawResponse);
                 throw new InvalidResponseException("no response");
             }
             var ackMode = true;
+			Log.Debug("ParseResponseAsByteArray(rawResponse={RawResponse}): ackMode → {AckMode}", rawResponse, ackMode);
             var (dataStartPos, dataEndPos) = (0u, 0u);
             for (var i = 0u; i < rawResponse.Length; i++)
             {
@@ -293,6 +322,7 @@
                     case MarkerACK:
                         dataStartPos = i;
                         ackMode = true;
+						Log.Debug("ParseResponseAsByteArray(rawResponse={RawResponse}): dataStartPos → {DataStartPos}", rawResponse, dataStartPos);
                         break;
                     case MarkerSTX:
                         dataStartPos = i;
@@ -300,6 +330,7 @@
                         break;
                     case MarkerETX:
                         dataEndPos = i;
+						Log.Debug("ParseResponseAsByteArray(rawResponse={RawResponse}): dataEndPos → {DataEndPos}", rawResponse, dataEndPos);
                         break;
                 }
             }
@@ -310,8 +341,11 @@
                 var checkSumPos = dataEndPos - 2u;
                 var (msgStartPos, msgEndPos) = (dataStartPos + 2u, checkSumPos);
                 var data = rawResponse.Slice(msgStartPos, msgEndPos);
+				Log.Debug("ParseResponseAsByteArray(rawResponse={RawResponse}): data → {Data}", rawResponse, data);
                 var cs = rawResponse.Slice(checkSumPos, dataEndPos);
+				Log.Debug("ParseResponseAsByteArray(rawResponse={RawResponse}): cs → {Cs}", rawResponse, cs);
                 var computedCS = ComputeCS(rawResponse.Slice(dataStartPos + 1u, msgEndPos));
+				Log.Debug("ParseResponseAsByteArray(rawResponse={RawResponse}): computedCS → {ComputedCS}", rawResponse, computedCS);
                 if (cs.SequenceEqual(computedCS))
                 {
                     return (null, ParseStatus(data));
@@ -327,6 +361,7 @@
                 var computedCS = ComputeCS(rawResponse.Slice(dataStartPos + 1u, msgEndPos));
                 if (cs.SequenceEqual(computedCS))
                 {
+					Log.Debug("<<< Exiting ParseResponseAsByteArray(rawResponse={RawResponse})", rawResponse);
                     return (data, ParseStatus(null));
                 }
             }
@@ -336,14 +371,18 @@
 
         public override DeviceStatusWithRawResponse RawRequest(RequestFrame requestFrame)
         {
+			Log.Information(">>> Entering RawRequest(requestFrame={RequestFrame})", requestFrame);
             if (requestFrame.RawRequest.Length == 0)
             {
                 var deviceStatus = new DeviceStatus();
+				Log.Debug("RawRequest(requestFrame={RequestFrame}): deviceStatus → {DeviceStatus}", requestFrame, deviceStatus);
                 deviceStatus.AddError("E401", "Request length must be at least 1 character");
                 return new DeviceStatusWithRawResponse(deviceStatus);
             }
             var cmd = PrinterEncoding.GetBytes(requestFrame.RawRequest.Substring(0, 1))[0];
+			Log.Debug("RawRequest(requestFrame={RequestFrame}): cmd → {Cmd}", requestFrame, cmd);
             var data = requestFrame.RawRequest.Substring(1);
+			Log.Debug("RawRequest(requestFrame={RequestFrame}): data → {Data}", requestFrame, data);
             var (rawResponse, status) = Request(cmd, data);
             return new DeviceStatusWithRawResponse(status) { RawResponse = rawResponse };
         }

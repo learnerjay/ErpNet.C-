@@ -17,6 +17,7 @@ namespace ErpNet.FP.Core.Drivers.BgIcp
             bool autoDetect = true, 
             IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgIslIcpFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"icp.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -33,12 +34,14 @@ namespace ErpNet.FP.Core.Drivers.BgIcp
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = false;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected int GetPrintColumnsOfModel(string modelName)
         {
+			Log.Information(">>> Entering GetPrintColumnsOfModel(modelName={ModelName})", modelName);
             /*
             За 57мм ISL3811.01,02,01М,02М – 32 символа
             За 80мм ISL3818 и 57мм ISL5011 – 47 символа
@@ -65,24 +68,30 @@ namespace ErpNet.FP.Core.Drivers.BgIcp
             {
                 return 32;
             }
+			Log.Debug("<<< Exiting GetPrintColumnsOfModel(modelName={ModelName})", modelName);
             return 47;
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect)
         {
+			Log.Information(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             var tabFields = rawDeviceInfo.Split('\t', 2);
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect}): tabFields → {TabFields}", rawDeviceInfo, autoDetect, tabFields);
             if (tabFields.Length != 2)
             {
+				Log.Error("Throwing InvalidDeviceInfoException from ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
                 throw new InvalidDeviceInfoException();
             }
 
             var fields = tabFields[0].Split(new int[] { 8, 8, 14, 4, 10, 1, 1 });
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect}): fields → {Fields}", rawDeviceInfo, autoDetect, fields);
             if (fields.Length != 7)
             {
                 throw new InvalidDeviceInfoException();
             }
 
             var spaceFields = tabFields[1].Split(' ', 2);
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect}): spaceFields → {SpaceFields}", rawDeviceInfo, autoDetect, spaceFields);
             if (spaceFields.Length != 2)
             {
                 throw new InvalidDeviceInfoException();
@@ -98,6 +107,7 @@ namespace ErpNet.FP.Core.Drivers.BgIcp
                 }
             }
             var printColumns = GetPrintColumnsOfModel(modelName);
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect}): printColumns → {PrintColumns}", rawDeviceInfo, autoDetect, printColumns);
             var info = new DeviceInfo
             {
                 SerialNumber = serialNumber,
@@ -111,6 +121,7 @@ namespace ErpNet.FP.Core.Drivers.BgIcp
                 TaxIdentificationNumber = fields[2].Trim()
             };
 
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             return info;
         }
     }

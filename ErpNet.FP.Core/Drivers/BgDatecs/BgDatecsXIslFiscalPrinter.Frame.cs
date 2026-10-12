@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Datecs Bulgaria.
@@ -14,6 +15,7 @@
 
         protected override byte[] BuildHostFrame(byte command, byte[]? data)
         {
+			_logger.LogInformation(">>> Entering BuildHostFrame(command={Command},data={Data})", command, data);
             // Frame header
             var frame = new List<byte>
             {
@@ -34,13 +36,16 @@
             frame.AddRange(ComputeBCC(frame.Skip(1).ToArray()));
             frame.Add(MarkerTerminator);
 
+			_logger.LogDebug("<<< Exiting BuildHostFrame(command={Command},data={Data})", command, data);
             return frame.ToArray();
         }
 
         protected override (string, DeviceStatus) ParseResponse(byte[]? rawResponse)
         {
+			_logger.LogInformation(">>> Entering ParseResponse(rawResponse={RawResponse})", rawResponse);
             if (rawResponse == null)
             {
+				_logger.LogError("Throwing InvalidResponseException from ParseResponse(rawResponse={RawResponse})", rawResponse);
                 throw new InvalidResponseException("no response");
             }
             var (preamblePos, separatorPos, postamblePos, terminatorPos) = (0u, 0u, 0u, 0u);
@@ -51,28 +56,38 @@
                 {
                     case MarkerPreamble:
                         preamblePos = i;
+						_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): preamblePos → {PreamblePos}", rawResponse, preamblePos);
                         break;
                     case MarkerSeparator:
                         separatorPos = i;
+						_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): separatorPos → {SeparatorPos}", rawResponse, separatorPos);
                         break;
                     case MarkerPostamble:
                         postamblePos = i;
+						_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): postamblePos → {PostamblePos}", rawResponse, postamblePos);
                         break;
                     case MarkerTerminator:
                         terminatorPos = i;
+						_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): terminatorPos → {TerminatorPos}", rawResponse, terminatorPos);
                         break;
                 }
             }
             if (preamblePos + 10 <= separatorPos && separatorPos + 8 < postamblePos && postamblePos + 4 < terminatorPos)
             {
                 var data = rawResponse.Slice(preamblePos + 10, separatorPos);
+				_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): data → {Data}", rawResponse, data);
                 var status = rawResponse.Slice(separatorPos + 1, postamblePos);
+				_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): status → {Status}", rawResponse, status);
                 var bcc = rawResponse.Slice(postamblePos + 1, terminatorPos);
+				_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): bcc → {Bcc}", rawResponse, bcc);
                 var computedBcc = ComputeBCC(rawResponse.Slice(preamblePos + 1, postamblePos + 1));
+				_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): computedBcc → {ComputedBcc}", rawResponse, computedBcc);
                 if (bcc.SequenceEqual(computedBcc))
                 {
                     var response = PrinterEncoding.GetString(data);
+					_logger.LogDebug("ParseResponse(rawResponse={RawResponse}): response → {Response}", rawResponse, response);
 
+					_logger.LogDebug("<<< Exiting ParseResponse(rawResponse={RawResponse})", rawResponse);
                     return (response, ParseStatus(status));
                 }
             }

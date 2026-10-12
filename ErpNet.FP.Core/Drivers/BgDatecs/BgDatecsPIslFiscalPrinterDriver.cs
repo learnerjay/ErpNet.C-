@@ -18,6 +18,7 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
             bool autoDetect = true, 
             IDictionary<string, string>? options = null)
         {
+			Log.Information(">>> Entering Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
             var fiscalPrinter = new BgDatecsPIslFiscalPrinter(channel, serviceOptions, options);
             var rawDeviceInfoCacheKey = $"isl.{channel.Descriptor}.{DriverName}";
             lock (channel)
@@ -36,15 +37,19 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
+			Log.Debug("<<< Exiting Connect(channel={Channel},serviceOptions={ServiceOptions},autoDetect={AutoDetect},options={Options})", channel, serviceOptions, autoDetect, options);
                 return fiscalPrinter;
             }
         }
 
         protected DeviceInfo ParseDeviceInfo(string rawDeviceInfo, bool autoDetect)
         {
+			Log.Information(">>> Entering ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             var commaFields = rawDeviceInfo.Split(',');
+			Log.Debug("ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect}): commaFields → {CommaFields}", rawDeviceInfo, autoDetect, commaFields);
             if (commaFields.Length != 6)
             {
+				Log.Error("Throwing InvalidDeviceInfoException from ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
                 throw new InvalidDeviceInfoException($"rawDeviceInfo must contain 6 comma-separated items for '{DriverName}'");
             }
             var serialNumber = commaFields[4];
@@ -86,6 +91,7 @@ namespace ErpNet.FP.Core.Drivers.BgDatecs
                 ItemTextMaxLength = 34, 
                 OperatorPasswordMaxLength = 8 
             };
+			Log.Debug("<<< Exiting ParseDeviceInfo(rawDeviceInfo={RawDeviceInfo},autoDetect={AutoDetect})", rawDeviceInfo, autoDetect);
             return info;
         }
     }

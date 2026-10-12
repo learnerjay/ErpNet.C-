@@ -3,13 +3,17 @@
     using System;
     using System.Collections.Generic;
     using System.Text.RegularExpressions;
+	using Microsoft.Extensions.Logging;
 
     public static class Helpers
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public static T[] Slice<T>(this T[] arr, uint indexFrom, uint indexTo)
         {
+			_logger.LogInformation(">>> Entering Slice(arr={Arr},indexFrom={IndexFrom},indexTo={IndexTo})", arr, indexFrom, indexTo);
             if (indexFrom > indexTo)
             {
+				_logger.LogError("Throwing ArgumentOutOfRangeException from Slice(arr={Arr},indexFrom={IndexFrom},indexTo={IndexTo})", arr, indexFrom, indexTo);
                 throw new ArgumentOutOfRangeException("indexFrom is bigger than indexTo!");
             }
 
@@ -17,11 +21,13 @@
             T[] result = new T[length];
             Array.Copy(arr, indexFrom, result, 0, length);
 
+			_logger.LogDebug("<<< Exiting Slice(arr={Arr},indexFrom={IndexFrom},indexTo={IndexTo})", arr, indexFrom, indexTo);
             return result;
         }
 
         public static string WithMaxLength(this string text, int maxLength = 72)
         {
+			_logger.LogInformation(">>> Entering WithMaxLength(text={Text},maxLength={MaxLength})", text, maxLength);
             if (text.Length <= maxLength)
             {
                 return text;
@@ -32,23 +38,32 @@
 
         public static IEnumerable<string> WrapAtLength(this string text, int maxLength)
         {
-            if (text == null)
+			_logger.LogInformation(">>> Entering WrapAtLength(text={Text},maxLength={MaxLength})", text, maxLength);
+				_logger.LogError("Throwing ArgumentNullException from WrapAtLength(text={Text},maxLength={MaxLength})", text, maxLength);
+            if (text == null) {
                 throw new ArgumentNullException("text");
-            if (maxLength < 1)
+            }
+				_logger.LogError("Throwing ArgumentException from WrapAtLength(text={Text},maxLength={MaxLength})", text, maxLength);
+            if (maxLength < 1) {
                 throw new ArgumentException("'maxLength' must be greater than 0.");
+            }
 
             var rows = Math.Ceiling((double)text.Length / maxLength);
+			_logger.LogDebug("WrapAtLength(text={Text},maxLength={MaxLength}): rows → {Rows}", text, maxLength, rows);
             if (rows < 2) return new string[] { text };
 
             var listOfStrings = new List<string>();
+			_logger.LogDebug("WrapAtLength(text={Text},maxLength={MaxLength}): listOfStrings → {ListOfStrings}", text, maxLength, listOfStrings);
 
             for (int i = 0; i < rows; i++)
             {
                 var index = i * maxLength;
                 var length = Math.Min(maxLength, text.Length - index);
+				_logger.LogDebug("WrapAtLength(text={Text},maxLength={MaxLength}): length → {Length}", text, maxLength, length);
                 listOfStrings.Add(text.Substring(index, length));
             }
 
+			_logger.LogDebug("<<< Exiting WrapAtLength(text={Text},maxLength={MaxLength})", text, maxLength);
             return listOfStrings;
         }
 
@@ -80,6 +95,7 @@
         {
             var listOfStrings = new List<string>();
             int ix = 0;
+			_logger.LogInformation(">>> Entering Split(str={Str},chunkSizes={ChunkSizes})", str, chunkSizes);
             foreach (var chunkSize in chunkSizes)
             {
                 if (ix + chunkSize > str.Length)
@@ -89,20 +105,27 @@
                 listOfStrings.Add(str.Substring(ix, chunkSize));
                 ix += chunkSize;
             }
+			_logger.LogDebug("<<< Exiting Split(str={Str},chunkSizes={ChunkSizes})", str, chunkSizes);
             return listOfStrings.ToArray();
         }
         public static int IntPow(this int a, int b)
         {
+			_logger.LogInformation(">>> Entering IntPow(a={A},b={B})", a, b);
             int result = 1;
-            for (int i = 0; i < b; i++)
+				_logger.LogDebug("IntPow(a={A},b={B}): result → {Result}", a, b, result);
+            for (int i = 0; i < b; i++) {
                 result *= a;
+            }
+			_logger.LogDebug("<<< Exiting IntPow(a={A},b={B})", a, b);
             return result;
         }
 
         public static int ParseTimeout(this string s)
         {
+			_logger.LogInformation(">>> Entering ParseTimeout(s={S})", s);
             int value = 0;
             var match = TimeoutRegex.Match(s);
+			_logger.LogDebug("ParseTimeout(s={S}): match → {Match}", s, match);
             if (match.Success &&
                 match.Groups.Count == 3 &&
                 int.TryParse(match.Groups[1].Value, out value))
@@ -110,6 +133,7 @@
                 switch (match.Groups[2].Value.ToLowerInvariant())
                 {
                     case "m":
+						_logger.LogDebug("ParseTimeout(s={S}): value → {Value}", s, value);
                         value *= 60 * 1000;
                         break;
                     case "s":
@@ -125,6 +149,7 @@
                         break;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseTimeout(s={S})", s);
             return value;
         }
 
