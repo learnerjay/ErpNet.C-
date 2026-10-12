@@ -19,7 +19,11 @@
         public KeepAliveService(
             IServiceController context)
         {
+			Log.Information(">>> Entering KeepAliveService(context={Context})", context);
             this.Context = context;
+			Log.Debug("KeepAliveService(context={Context}): Context → {Context1}", context, Context);
+        Log.Debug("KeepAliveService(context={Context}): this.Context → {Arg1}", context, this.Context);
+        Log.Debug("<<< Exiting KeepAliveService(context={Context})", context);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -35,11 +39,13 @@
 
             Log.Information("Keep Alive Background Service is started.");
 
+			Log.Debug("<<< Exiting StartAsync(cancellationToken=<redacted>)");
             return Task.CompletedTask;
         }
 
         private void KeepAliveWithGetStatus(object? state)
         {
+			Log.Information(">>> Entering KeepAliveWithGetStatus(state={State})", state);
             if (!Context.IsReady)
             {
                 Log.Information("Keep Alive Background Service run skipped(ongoing detection process)!");
@@ -58,20 +64,25 @@
             {
                 Log.Information($"Error occured while keeping alive with get status: {e.Message}");
             }
+			Log.Debug("<<< Exiting KeepAliveWithGetStatus(state={State})", state);
         }
 
         public Task StopAsync(CancellationToken _)
         {
+			Log.Information(">>> Entering StopAsync(_={_})", _);
             Timer?.Change(Timeout.Infinite, 0);
 
             Log.Information("Keep Alive Background Service is stopped.");
 
+			Log.Debug("<<< Exiting StopAsync(_={_})", _);
             return Task.CompletedTask;
         }
 
         public void Dispose()
         {
+			Log.Information(">>> Entering Dispose()");
             Timer?.Dispose();
+			Log.Debug("<<< Exiting Dispose()");
         }
     }
 }

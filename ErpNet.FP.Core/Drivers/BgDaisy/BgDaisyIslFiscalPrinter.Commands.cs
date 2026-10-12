@@ -6,6 +6,7 @@
     using System.Text;
     using ErpNet.FP.Core.Configuration;
     using Newtonsoft.Json;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the ISL implementation of Daisy Bulgaria.
@@ -13,6 +14,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIslFiscalPrinter" />
     public partial class BgDaisyIslFiscalPrinter : BgIslFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         protected const byte
             DaisyCommandGetDeviceConstants          = 0x80,
             DaisyCommandAbortFiscalReceipt          = 0x82,
@@ -28,6 +30,7 @@
             PriceModifierType priceModifierType = PriceModifierType.None,
             int ItemCode = 999)
         {
+			_logger.LogInformation(">>> Entering AddItem()");
             if (department <= 0) 
             {
                 return base.AddItem(department, itemText, unitPrice, taxGroup, quantity, priceModifierValue,
@@ -58,28 +61,37 @@
                         priceModifierType == PriceModifierType.DiscountAmount
                         ? -priceModifierValue : priceModifierValue).ToString("F2", CultureInfo.InvariantCulture));
             }
+			_logger.LogDebug("<<< Exiting AddItem()");
             return Request(DaisyCommandFiscalReceiptSaleDepartment, itemData.ToString());
         }
 
         public override (string, DeviceStatus) SubtotalChangeAmount(Decimal amount)
         {
+			_logger.LogInformation(">>> Entering SubtotalChangeAmount(amount={Amount})", amount);
+            _logger.LogDebug("<<< Exiting SubtotalChangeAmount(amount={Amount})", amount);
             return Request(CommandSubtotal, $"10${amount.ToString("F2", CultureInfo.InvariantCulture)}");
         }
 
         public override (string, DeviceStatus) AbortReceipt()
         {
+			_logger.LogInformation(">>> Entering AbortReceipt()");
+            _logger.LogDebug("<<< Exiting AbortReceipt()");
             return Request(DaisyCommandAbortFiscalReceipt);
         }
 
         public (string, DeviceStatus) GetRawDeviceConstants()
         {
+			_logger.LogInformation(">>> Entering GetRawDeviceConstants()");
+            _logger.LogDebug("<<< Exiting GetRawDeviceConstants()");
             return Request(DaisyCommandGetDeviceConstants);
         }
 
 
         public override (string, DeviceStatus) GetTaxIdentificationNumber()
         {
+			_logger.LogInformation(">>> Entering GetTaxIdentificationNumber()");
             var (response, deviceStatus) = Request(CommandGetTaxIdentificationNumber);
+			_logger.LogDebug("<<< Exiting GetTaxIdentificationNumber()");
             return (response.Trim().Trim(new Char[] { '-' }), deviceStatus);
         }
 
@@ -157,7 +169,9 @@
 
         protected override DeviceStatus ParseStatus(byte[]? status)
         {
+			_logger.LogInformation(">>> Entering ParseStatus(status={Status})", status);
             var deviceStatus = new DeviceStatus();
+			_logger.LogDebug("ParseStatus(status={Status}): deviceStatus → {DeviceStatus}", status, deviceStatus);
             if (status == null)
             {
                 return deviceStatus;
@@ -169,6 +183,7 @@
                 if (i == 3)
                 {
                     byte errorCode = (byte)(status[i] & 0b01111111);
+					_logger.LogDebug("ParseStatus(status={Status}): errorCode → {ErrorCode}", status, errorCode);
                     if (errorCode > 0)
                     {
                         deviceStatus.AddError("E999", $"Error code: {errorCode}, see Daisy Manual");
@@ -192,6 +207,7 @@
                     mask >>= 1;
                 }
             }
+			_logger.LogDebug("<<< Exiting ParseStatus(status={Status})", status);
             return deviceStatus;
         }
 

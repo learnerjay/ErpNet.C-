@@ -1,4 +1,5 @@
-﻿var availablePrinters = {}
+﻿var logger = (typeof logger !== 'undefined' && logger) || console;
+var availablePrinters = {}
 var availablePaymentTypes = ['cash', 'check', 'coupons', 'ext-coupons', 'packaging', 'internal-usage', 'damage', 'card', 'bank', 'reserved1', 'reserved2'];
 var availablePrinterConstantsNames = ['itemTextMaxLength', 'commentTextMaxLength'];
 // use positional matching of availablePrinterOptions, hintsForPrinterOptions, useOfPrinterOptions and displayTextsForPrinterOptions
@@ -9,6 +10,7 @@ var displayTextsForPrinterOptions = ['Automatically Activate Payment Terminal'];
 var printerProperties = {}
 
 function showAvailablePrinters() {
+	logger.info('>>> Entering showAvailablePrinters()');
     $.ajax({
         type: 'GET',
         url: '/printers',
@@ -17,6 +19,7 @@ function showAvailablePrinters() {
         timeout: 0,
         context: $('#PrintersList'),
         success: function (data) {
+			logger.info(`>>> Entering success(data=${data})`);
             availablePrinters = data
             if (!printerProperties)
                 getPrinterProperties()
@@ -42,6 +45,7 @@ function showAvailablePrinters() {
                 for (var pc in availablePrinterConstantsNames) {
                     var printerConstantName = availablePrinterConstantsNames[pc]
                     var printerConstantValue = ''
+					logger.debug(`success(data=${data}): printerConstantValue → ${printerConstantValue}`);
                     if (printerProps) {
                         var pv = printerProps.printerConstants[printerConstantName]
                         if (pv) {
@@ -80,6 +84,7 @@ function showAvailablePrinters() {
                 paymentMappingsContent += '</div>';
 
                 var printerOpionsContent = '';
+				logger.debug(`success(data=${data}): printerOpionsContent → ${printerOpionsContent}`);
                 if (printerProps) {
                     for (var i = 0; i < availablePrinterOptions.length; i++) {
                         var po = availablePrinterOptions[i];
@@ -89,7 +94,9 @@ function showAvailablePrinters() {
                             var printerOptionHint = hintsForPrinterOptions[i];
                             var printerOptionDisplayText = displayTextsForPrinterOptions[i];
                             var inputId = printer.serialNumber + '_po_' + printerOptionName;
+							logger.debug(`success(data=${data}): inputId → ${inputId}`);
                             var printerOptionValue = '';
+							logger.debug(`success(data=${data}): printerOptionValue → ${printerOptionValue}`);
 
                             var pv = printerProps.printerOptions[printerOptionName]
                             //if (pv) {
@@ -146,25 +153,34 @@ function showAvailablePrinters() {
             }
             var printersCount = Object.keys(data).length
             this.append('<p>Available ' + printersCount + ' printer(s).</p>')
+			logger.debug(`success(data=${data}): printersCount → ${printersCount}`);
         },
         error: function(xhr, type) {
+			logger.info(`>>> Entering error(xhr=${xhr},type=${type})`);
             // wait more time
+			logger.debug('<<< Exiting showAvailablePrinters()');
             setTimeout(function() { showAvailablePrinters() }, 3000);
+			logger.debug(`<<< Exiting error(xhr=${xhr},type=${type})`);
         }
     })
 }
 
 function getPrinterProperties(serialNumber) {
+	logger.info(`>>> Entering getPrinterProperties(serialNumber=${serialNumber})`);
     for (var pi in printerProperties) {
         var properties = printerProperties[pi]
         if (properties.printerSerialNumber == serialNumber) {
             return properties
         }
     }
+	logger.debug(`<<< Exiting getPrinterProperties(serialNumber=${serialNumber})`);
+	logger.info('>>> Entering getPrinterProperties()');
+	logger.debug('<<< Exiting getPrinterProperties()');
     return {}
 }
 
 function applyChanges(serialNumber) {
+	logger.info(`>>> Entering applyChanges(serialNumber=${serialNumber})`);
     //printerProperties[serialNumber] = {
     //    paymentTypeMappings: {},
     //    printerConstants: {},
@@ -189,12 +205,14 @@ function applyChanges(serialNumber) {
     for (var poi in useOfPrinterOptions) {
         var printerOptionName = useOfPrinterOptions[poi];
         var input = document.getElementById(serialNumber + '_po_' + printerOptionName);
+		logger.debug(`applyChanges(serialNumber=${serialNumber}): input → ${input}`);
         var v = input.checked;
         if (v) {
             printerProperties[serialNumber].printerOptions[printerOptionName] = "True";
         }
         else {
             printerProperties[serialNumber].printerOptions[printerOptionName] = "False";
+			logger.debug(`<<< Exiting applyChanges(serialNumber=${serialNumber})`);
         }
     }
     console.log("props", printerProperties)
@@ -211,11 +229,14 @@ function applyChanges(serialNumber) {
         },
         error: function (xhr, type) {
             showToastMessage("Cannot apply changes to the printers properties.")
+			logger.info('>>> Entering detectAvailablePrinters()');
+			logger.debug('<<< Exiting detectAvailablePrinters()');
         }
     })
 }
 
 function autoDetectChanged() {
+	logger.info('>>> Entering autoDetectChanged()');
     $.ajax({
         type: 'GET',
         url: '/service/toggleautodetect',
@@ -232,9 +253,11 @@ function autoDetectChanged() {
             showToastMessage("Cannot change auto detect mode.")
         }
     })
+	logger.debug('<<< Exiting autoDetectChanged()');
 }
 
 function excludePortsChanged() {
+	logger.info('>>> Entering excludePortsChanged()');
     var excludePortListValue = document.getElementById("ExcludePortList").value;
     $.ajax({
         type: 'POST',
@@ -252,9 +275,11 @@ function excludePortsChanged() {
             showToastMessage("Cannot update exclude ports list.")
         }
     })
+	logger.debug('<<< Exiting excludePortsChanged()');
 }
 
 function detectionTimeoutChanged() {   
+	logger.info('>>> Entering detectionTimeoutChanged()');
     var detectionTimeoutValue = document.getElementById("DetectionTimeout").value;
     $.ajax({
         type: 'POST',
@@ -270,11 +295,15 @@ function detectionTimeoutChanged() {
         },
         error: function (xhr, type) {
             showToastMessage("Cannot update detection timeout.")
+			logger.info('>>> Entering error()');
+			logger.debug('<<< Exiting error()');
         }
     })
+	logger.debug('<<< Exiting detectionTimeoutChanged()');
 }
 
 function saveWebAccess() {
+	logger.info('>>> Entering saveWebAccess()');
     var origins = $("#AllowedOrigins").val().split(',').map(s => s.trim()).filter(s => s.length > 0);
     var enablePrivate = $("#EnablePrivateNetwork").is(':checked');
 
@@ -293,9 +322,11 @@ function saveWebAccess() {
             showToastMessage("Error saving web access settings.");
         }
     });
+	logger.debug('<<< Exiting saveWebAccess()');
 }
 
 function showConfiguredPrinters() {
+	logger.info('>>> Entering showConfiguredPrinters()');
     $.ajax({
         type: 'GET',
         url: '/service/printers',
@@ -323,6 +354,7 @@ function showConfiguredPrinters() {
             this.append('<p>Configured ' + printersCount + ' printer(s).</p>')
         },
         error: function (xhr, type) {
+			logger.debug('<<< Exiting showConfiguredPrinters()');
             // wait more time
             setTimeout(function() { showConfiguredPrinters() }, 3000);
         }
@@ -330,6 +362,7 @@ function showConfiguredPrinters() {
 }
 
 function getServerVariables() {
+	logger.info('>>> Entering getServerVariables()');
     $.ajax({
         type: 'GET',
         url: '/service/vars',
@@ -354,6 +387,7 @@ function getServerVariables() {
             showToastMessage("Cannot get server variables.")
         }
     })
+	logger.debug('<<< Exiting getServerVariables()');
 }
 
 function getPrinterProperties() {
@@ -374,6 +408,7 @@ function getPrinterProperties() {
 }
 
 function detectAvailablePrinters() {
+	logger.info('>>> Entering detectAvailablePrinters()');
     availablePrinters = {}
     $("#DetectButton").attr("disabled", "disabled")
     $('#PrintersList').html('<div class="spinner primary"></div>Detecting...')
@@ -396,11 +431,14 @@ function detectAvailablePrinters() {
 }
 
 function showPrinters() {
+	logger.info('>>> Entering showPrinters()');
     showAvailablePrinters()
     showConfiguredPrinters()
+	logger.debug('<<< Exiting showPrinters()');
 }
 
 function configurePrinter() {
+	logger.info('>>> Entering configurePrinter()');
     $("#NewPrinterModal").prop('checked', false)
     $.ajax({
         type: 'POST',
@@ -419,9 +457,11 @@ function configurePrinter() {
             showToastMessage("Cannot configure the new printer.")
         }
     })
+	logger.debug('<<< Exiting configurePrinter()');
 }
 
 function deletePrinter(printerId, printerUri) {
+	logger.info(`>>> Entering deletePrinter(printerId=${printerId},printerUri=${printerUri})`);
     $.ajax({
         type: 'POST',
         url: '/service/printers/delete',
@@ -439,9 +479,11 @@ function deletePrinter(printerId, printerUri) {
             showToastMessage("Cannot delete the printer configuration.")
         }
     })
+	logger.debug(`<<< Exiting deletePrinter(printerId=${printerId},printerUri=${printerUri})`);
 }
 
 function saveSettingsForPrinter(printerId) {
+	logger.info(`>>> Entering saveSettingsForPrinter(printerId=${printerId})`);
     $.ajax({
         type: 'POST',
         url: '/service/printers/delete',
@@ -474,9 +516,11 @@ function saveSettingsForPrinter(printerId) {
             showToastMessage("Cannot delete the old settings.")
         }
     })
+	logger.debug(`<<< Exiting saveSettingsForPrinter(printerId=${printerId})`);
 }
 
 function syncTime(printerId) {
+	logger.info(`>>> Entering syncTime(printerId=${printerId})`);
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/datetime',
@@ -497,14 +541,17 @@ function syncTime(printerId) {
                 }
                 showToastMessage("Cannot sync printer's time: " + errors.trim())
             }
+				logger.debug(`success(data=${data}): errors → ${errors}`);
         },
         error: function (xhr, type) {
             showToastMessage("Cannot sync printer's time.")
         }
     })
+	logger.debug(`<<< Exiting syncTime(printerId=${printerId})`);
 }
 
 function printDuplicate(printerId) {
+	logger.info(`>>> Entering printDuplicate(printerId=${printerId})`);
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/duplicate',
@@ -530,9 +577,11 @@ function printDuplicate(printerId) {
             showToastMessage("Cannot print duplicate of the last fiscal receipt.")
         }
     })
+	logger.debug(`<<< Exiting printDuplicate(printerId=${printerId})`);
 }
 
 function printZReport(printerId) {
+	logger.info(`>>> Entering printZReport(printerId=${printerId})`);
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/zreport',
@@ -558,12 +607,16 @@ function printZReport(printerId) {
             showToastMessage("Cannot print the Z-Report.")
         }
     })
+	logger.debug(`<<< Exiting printZReport(printerId=${printerId})`);
 }
 
 function printPeriodReport(printerId) {
+	logger.info(`>>> Entering printPeriodReport(printerId=${printerId})`);
     var startDate = $('#period-start-' + printerId).val()
     var endDate = $('#period-end-' + printerId).val()
     if (!startDate || !endDate) {
+	logger.debug(`printPeriodReport(printerId=${printerId}): startDate → ${startDate}`);
+	logger.debug(`printPeriodReport(printerId=${printerId}): endDate → ${endDate}`);
         showToastMessage("Please choose both a start and an end date for the period report.")
         return
     }
@@ -600,9 +653,11 @@ function printPeriodReport(printerId) {
             showToastMessage("Cannot print the period report.")
         }
     })
+	logger.debug(`<<< Exiting printPeriodReport(printerId=${printerId})`);
 }
 
 function printXReport(printerId) {
+	logger.info(`>>> Entering printXReport(printerId=${printerId})`);
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/xreport',
@@ -628,9 +683,11 @@ function printXReport(printerId) {
             showToastMessage("Cannot print the X-Report.")
         }
     })
+	logger.debug(`<<< Exiting printXReport(printerId=${printerId})`);
 }
 
 function resetPrinter(printerId) {
+	logger.info(`>>> Entering resetPrinter(printerId=${printerId})`);
     $.ajax({
         type: 'POST',
         url: '/printers/' + printerId + '/reset',
@@ -656,26 +713,35 @@ function resetPrinter(printerId) {
             showToastMessage("Cannot reset the printer.")
         }
     })
+	logger.debug(`<<< Exiting resetPrinter(printerId=${printerId})`);
 }
 
 function protocolSelected(protocolTemplate) {
+	logger.info(`>>> Entering protocolSelected(protocolTemplate=${protocolTemplate})`);
     var delimiter = "://"
     var oldValue = $("#NewPrinterUri").val()
     if (oldValue) {
+	logger.debug(`protocolSelected(protocolTemplate=${protocolTemplate}): delimiter → ${delimiter}`);
+	logger.debug(`protocolSelected(protocolTemplate=${protocolTemplate}): oldValue → ${oldValue}`);
         var oldParts = oldValue.split(delimiter, 2)
         if (oldParts.length == 2) {
+		logger.debug(`protocolSelected(protocolTemplate=${protocolTemplate}): oldParts → ${oldParts}`);
             newParts = protocolTemplate.split(delimiter, 2)
             $("#NewPrinterUri").val(newParts[0] + delimiter + oldParts[1])
         }
     } else {
         $("#NewPrinterUri").val(protocolTemplate)
     }
+		logger.debug(`<<< Exiting protocolSelected(protocolTemplate=${protocolTemplate})`);
 }
 
 function showToastMessage(msg) {
+	logger.info(`>>> Entering showToastMessage(msg=${msg})`);
     var toastArea = $("#ToastArea")
     toastArea.html('<span class="toast">' + msg + '</span>')
     setTimeout(function () { toastArea.html(""); }, 3000);
+	logger.debug(`showToastMessage(msg=${msg}): toastArea → ${toastArea}`);
+	logger.debug(`<<< Exiting showToastMessage(msg=${msg})`);
 }
 
 $(function () {

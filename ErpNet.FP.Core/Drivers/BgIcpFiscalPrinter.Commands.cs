@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Text;
+	using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Fiscal printer using the Icp implementation of Isl Bulgaria.
@@ -11,6 +12,7 @@
     /// <seealso cref="ErpNet.FP.Drivers.BgIcpFiscalPrinter" />
     public partial class BgIcpFiscalPrinter : BgFiscalPrinter
     {
+		private static readonly Microsoft.Extensions.Logging.ILogger _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         public override IDictionary<PaymentType, string> GetPaymentTypeMappings()
         {
             var paymentTypeMappings = new Dictionary<PaymentType, string> {
@@ -32,6 +34,8 @@
 
         public override string GetTaxGroupText(TaxGroup taxGroup)
         {
+			_logger.LogInformation(">>> Entering GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
+			_logger.LogDebug("<<< Exiting GetTaxGroupText(taxGroup={TaxGroup})", taxGroup);
             return taxGroup switch
             {
                 TaxGroup.TaxGroup1 => "1",
@@ -48,27 +52,33 @@
 
         public virtual (string, DeviceStatus) SetDeviceDateTime(DateTime dateTime)
         {
+			_logger.LogInformation(">>> Entering SetDeviceDateTime(dateTime={DateTime})", dateTime);
             var dateTimeData = new StringBuilder()
                 .Append("73")
                 .Append(dateTime.ToString("ddMMyyyyHHmmss", CultureInfo.InvariantCulture));
+			_logger.LogDebug("<<< Exiting SetDeviceDateTime(dateTime={DateTime})", dateTime);
             return Request(dateTimeData.ToString());
         }
 
         public virtual (string, DeviceStatus) GetRawDeviceInfo()
         {
+			_logger.LogInformation(">>> Entering GetRawDeviceInfo()");
             var (response00, status00) = Request("00");
             if (!status00.Ok)
             {
+				_logger.LogError("Throwing InvalidDeviceInfoException from GetRawDeviceInfo()");
                 throw new InvalidDeviceInfoException();
             }
 
             var fields = response00.Split(new int[] { 4, 4 });
+			_logger.LogDebug("GetRawDeviceInfo(): fields → {Fields}", fields);
             if (fields.Length != 2)
             {
                 throw new InvalidDeviceInfoException();
             }
             DeviceNo = PrinterEncoding.GetBytes(fields[1]);
 
+			_logger.LogDebug("GetRawDeviceInfo(): DeviceNo → {DeviceNo}", DeviceNo);
             var (responseFP, statusFP) = Request("F807");
             if (!statusFP.Ok)
             {
@@ -76,11 +86,14 @@
             }
 
             var response = $"{response00}\t{responseFP}";
+			_logger.LogDebug("GetRawDeviceInfo(): response → {Response}", response);
+			_logger.LogDebug("<<< Exiting GetRawDeviceInfo()");
             return (response, statusFP);
         }
 
         public virtual (string, DeviceStatus) GetFiscalMemorySerialNumber()
         {
+			_logger.LogInformation(">>> Entering GetFiscalMemorySerialNumber()");
             var (response, status) = Request("F0");
             if (!status.Ok)
             {
@@ -88,27 +101,32 @@
             }
 
             var fields = response.Split(new int[] { 8, 8 });
+			_logger.LogDebug("GetFiscalMemorySerialNumber(): fields → {Fields}", fields);
             if (fields.Length != 2)
             {
                 status.AddInfo($"Error occured while parsing raw device info");
                 status.AddError("E409", $"Wrong format of raw device info");
                 return (response, status);
             }
+			_logger.LogDebug("<<< Exiting GetFiscalMemorySerialNumber()");
             return (fields[1], status);
         }
 
         public virtual (string, decimal?, DeviceStatus) GetReceiptNumberAndAmount()
         {
+			_logger.LogInformation(">>> Entering GetReceiptNumberAndAmount()");
             var (response, status) = Request("F801");
             if (status.Ok)
             {
                 var fields = response.Split(new int[] { 6, 8 });
+				_logger.LogDebug("GetReceiptNumberAndAmount(): fields → {Fields}", fields);
                 if (fields.Length == 2)
                 {
                     var receiptNumber = fields[0];
                     try
                     {
                         var receiptAmount = decimal.Parse(fields[1], CultureInfo.InvariantCulture) / 100m;
+						_logger.LogDebug("GetReceiptNumberAndAmount(): receiptAmount → {ReceiptAmount}", receiptAmount);
                         return (receiptNumber, receiptAmount, status);
                     }
                     catch
@@ -124,22 +142,28 @@
                 }
             }
 
+			_logger.LogDebug("<<< Exiting GetReceiptNumberAndAmount()");
             return (string.Empty, null, status);
         }
 
         public virtual DeviceStatus FullPayment()
         {
+			_logger.LogInformation(">>> Entering FullPayment()");
             var (_, status) = Request("490");//"4902");
+			_logger.LogDebug("<<< Exiting FullPayment()");
             return status;
         }
 
         public virtual void AbortReceipt()
         {
+			_logger.LogInformation(">>> Entering AbortReceipt()");
             Request("450");
+			_logger.LogDebug("<<< Exiting AbortReceipt()");
         }
 
         public virtual (System.DateTime?, DeviceStatus) GetDateTime()
         {
+			_logger.LogInformation(">>> Entering GetDateTime()");
             var (dateTimeResponse, deviceStatus) = Request("F3");
             if (!deviceStatus.Ok)
             {
@@ -158,17 +182,20 @@
             {
                 deviceStatus.AddInfo($"Error occured while parsing current date and time");
                 deviceStatus.AddError("E409", $"Wrong format of date and time");
+				_logger.LogDebug("<<< Exiting GetDateTime()");
                 return (null, deviceStatus);
             }
         }
 
         public virtual (string, DeviceStatus) MoneyTransfer(decimal amount)
         {
+			_logger.LogInformation(">>> Entering MoneyTransfer(amount={Amount})", amount);
             var tranferData = new StringBuilder()
                 .Append("61")
                 .Append(amount > 0 ? '0' : '1')
                 .Append('0') // In cash
                 .Append(IcpDecimal(Math.Abs(amount), 12, 2));
+			_logger.LogDebug("<<< Exiting MoneyTransfer(amount={Amount})", amount);
             return Request(tranferData.ToString());
         }
 
@@ -184,8 +211,10 @@
             bool reversalReceipt = false,
             int ItemCode = 999)
         {
+			_logger.LogInformation(">>> Entering AddItem()");
             //Making sure ItemCode is within accepted boundries
             ItemCode = (ItemCode > 99999999) || (ItemCode < 1) ? 99999999 : ItemCode;
+			_logger.LogDebug("AddItem(): ItemCode → {ItemCode}", ItemCode);
             var itemData = new StringBuilder()
                 .Append(reversalReceipt ? "24" : "44")
                 .Append(uniqueSaleNumber)
@@ -215,29 +244,36 @@
                 .Append(priceModifierIsPercent ? "47" : "46")
                 .Append(priceModifierIsDiscount ? "0" : "1")
                 .Append(IcpDecimal(priceModifierValue, priceModifierIsPercent ? 4 : 8, 2));
+			_logger.LogDebug("<<< Exiting AddItem()");
             return Request(priceModifierData.ToString());
         }
 
         public virtual (string, DeviceStatus) AddComment(string uniqueSaleNumber, string text)
         {
+			_logger.LogInformation(">>> Entering AddComment(uniqueSaleNumber={UniqueSaleNumber},text={Text})", uniqueSaleNumber, text);
             var commentData = new StringBuilder()
                 .Append("81")
                 .Append(uniqueSaleNumber)
                 .Append(text.WithMaxLength(Info.CommentTextMaxLength));
+			_logger.LogDebug("<<< Exiting AddComment(uniqueSaleNumber={UniqueSaleNumber},text={Text})", uniqueSaleNumber, text);
             return Request(commentData.ToString());
         }
         public virtual (string, DeviceStatus) AddPayment(decimal amount, PaymentType paymentType)
         {
+			_logger.LogInformation(">>> Entering AddPayment(amount={Amount},paymentType={PaymentType})", amount, paymentType);
             var paymentData = new StringBuilder()
                 .Append("49")
                 .Append(GetPaymentTypeText(paymentType))
                 .Append(IcpDecimal(amount, 12, 2));
                 //.Append("0");
+			_logger.LogDebug("<<< Exiting AddPayment(amount={Amount},paymentType={PaymentType})", amount, paymentType);
             return Request(paymentData.ToString());
         }
 
         public override string GetReversalReasonText(ReversalReason reversalReason)
         {
+			_logger.LogInformation(">>> Entering GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
+			_logger.LogDebug("<<< Exiting GetReversalReasonText(reversalReason={ReversalReason})", reversalReason);
             return reversalReason switch
             {
                 ReversalReason.OperatorError => "0",
@@ -256,6 +292,7 @@
             string operatorId,
             string operatorPassword)
         {
+			_logger.LogInformation(">>> Entering OpenReversalReceipt()");
             var reversalReceiptData = new StringBuilder()
                 .Append("20")
                 .Append(GetReversalReasonText(reason))
@@ -264,11 +301,14 @@
                 .Append(receiptDateTime.ToString("ddMMyyyyHHmmss", CultureInfo.InvariantCulture))
                 .Append(fiscalMemorySerialNumber)
                 .Append(uniqueSaleNumber);
+				_logger.LogDebug("<<< Exiting OpenReversalReceipt()");
             return Request(reversalReceiptData.ToString());
         }
 
         public virtual (string, DeviceStatus) PrintDailyReport(bool zeroing = true)
         {
+			_logger.LogInformation(">>> Entering PrintDailyReport(zeroing={Zeroing})", zeroing);
+            _logger.LogDebug("<<< Exiting PrintDailyReport(zeroing={Zeroing})", zeroing);
             return Request(zeroing ? "510" : "511");
         }
 
@@ -283,17 +323,21 @@
             DateTime startDate,
             DateTime endDate)
         {
+			_logger.LogInformation(">>> Entering PrintPeriodReport()");
             var periodReportData = new StringBuilder()
                 .Append(CommandPrintFMReportByDate)
                 .Append(type == PeriodReportType.Detailed ? "01" : "11")
                 .Append(FormatPeriodReportDate(startDate))
                 .Append(FormatPeriodReportDate(endDate));
 
+			_logger.LogDebug("<<< Exiting PrintPeriodReport()");
             return Request(periodReportData.ToString());
         }
 
         protected static string FormatPeriodReportDate(DateTime date)
         {
+			_logger.LogInformation(">>> Entering FormatPeriodReportDate(date={Date})", date);
+            _logger.LogDebug("<<< Exiting FormatPeriodReportDate(date={Date})", date);
             return date.ToString("ddMMyyyy", CultureInfo.InvariantCulture);
         }
 
@@ -305,6 +349,7 @@
         /// </summary>
         protected virtual bool IsLongRunningRequest(byte[]? data)
         {
+			_logger.LogInformation(">>> Entering IsLongRunningRequest(data={Data})", data);
             if (data == null || data.Length < CommandPrintFMReportByDate.Length)
             {
                 return false;
@@ -318,11 +363,14 @@
                 }
             }
 
+			_logger.LogDebug("<<< Exiting IsLongRunningRequest(data={Data})", data);
             return true;
         }
 
         protected static string IcpDecimal(decimal value, int length = 10, int digitsAfterPoint = 2)
         {
+			_logger.LogInformation(">>> Entering IcpDecimal(value={Value},length={Length},digitsAfterPoint={DigitsAfterPoint})", value, length, digitsAfterPoint);
+            _logger.LogDebug("<<< Exiting IcpDecimal(value={Value},length={Length},digitsAfterPoint={DigitsAfterPoint})", value, length, digitsAfterPoint);
             return ((int)Math.Round(value * 10.IntPow(digitsAfterPoint), 0, MidpointRounding.AwayFromZero)).ToString($"D{length}");
         }
 

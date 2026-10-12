@@ -130,7 +130,11 @@
 
         public ServiceControllerContext()
         {
+			Log.Information(">>> Entering ServiceControllerContext()");
             Provider = new Provider.Provider(configOptions);
+			Log.Debug("ServiceControllerContext(): Provider → {Provider}", Provider);
+        Log.Debug("ServiceControllerContext(): Provider → {Provider}", Provider);
+        Log.Debug("<<< Exiting ServiceControllerContext()");
         }
 
         protected abstract void SetupProvider();
@@ -138,14 +142,18 @@
 
         protected virtual void Setup()
         {
+			Log.Information(">>> Entering Setup()");
             ReadOptions();
             SetupProvider();
             isReady = true;
+			Log.Debug("Setup(): isReady → {IsReady}", isReady);
             Task.Run(() => Detect());
+			Log.Debug("<<< Exiting Setup()");
         }
 
         protected virtual void ReadOptions()
         {
+			Log.Information(">>> Entering ReadOptions()");
             // Server ID
             if (String.IsNullOrEmpty(configOptions.ServerId))
             {
@@ -154,6 +162,8 @@
                     .Substring(0, 22)
                     .Replace("/", "_")
                     .Replace("+", "-");
+					Log.Debug("<<< Exiting ReadOptions()");
+					Log.Debug("ReadOptions(): configOptions.ServerId → {Arg0}", configOptions.ServerId);
                 configOptions.ServerId = serverId;
             }
             this.ServerId = configOptions.ServerId;
@@ -186,6 +196,7 @@
                                     try
                                     {
                                         var printer = Provider.Connect(printerSetting.Value.Uri, configOptions, false, null);
+										Log.Debug("Detect(forceAutoDetect={ForceAutoDetect}): printer → {Printer}", forceAutoDetect, printer);
                                         Log.Information($"{logString}, OK");
                                         PrintersInfo.Add(printerSetting.Key, printer.DeviceInfo);
                                         Printers.Add(printerSetting.Key, printer);
@@ -215,15 +226,18 @@
                         {
                             // use Uris instead of Channels
                             var usedChannel = printer.Value.DeviceInfo.Uri.Split("//")[1].Split(':')[0];
+							Log.Debug("Detect(forceAutoDetect={ForceAutoDetect}): usedChannel → {UsedChannel}", forceAutoDetect, usedChannel);
                             if (!excludePortList.Contains(usedChannel) && usedChannel.StartsWith("COM"))
                                 excludePortList.Add(usedChannel);
                         }
                         // Autodetecting
                         var autoDetectedPrinters = new Dictionary<string, PrinterConfig>();
+						Log.Debug("Detect(forceAutoDetect={ForceAutoDetect}): autoDetectedPrinters → {AutoDetectedPrinters}", forceAutoDetect, autoDetectedPrinters);
                         if (forceAutoDetect || configOptions.AutoDetect)
                         {
                             Log.Information("Autodetecting local printers...");
                             var printers = Provider.DetectAvailablePrinters(excludePortList);
+							Log.Debug("Detect(forceAutoDetect={ForceAutoDetect}): printers → {Printers}", forceAutoDetect, printers);
                             foreach (KeyValuePair<string, IFiscalPrinter> printer in printers)
                             {
                                 AddPrinter(printer.Value);
@@ -250,6 +264,7 @@
 
         public TaskInfoResult GetTaskInfo(string taskId)
         {
+			Log.Information(">>> Entering GetTaskInfo(taskId={TaskId})", taskId);
             lock (taskSyncLock)
             {
                 var taskInfoResult = new TaskInfoResult();
@@ -258,21 +273,26 @@
                         && printJob is not null)
                     {
                         taskInfoResult.TaskStatus = printJob.TaskStatus;
+						Log.Debug("GetTaskInfo(taskId={TaskId}): taskInfoResult.TaskStatus → {Arg1}", taskId, taskInfoResult.TaskStatus);
                         if (printJob.Result != null)
                         {
                             taskInfoResult.Result = printJob.Result;
+							Log.Debug("GetTaskInfo(taskId={TaskId}): taskInfoResult.Result → {Arg1}", taskId, taskInfoResult.Result);
                         }
                     }
                 }
+				Log.Debug("<<< Exiting GetTaskInfo(taskId={TaskId})", taskId);
                 return taskInfoResult;
             }
         }
 
         public async Task<object?> RunAsync(PrintJob printJob)
         {
+			Log.Information(">>> Entering RunAsync(printJob={PrintJob})", printJob);
             try
             {
                 var taskId = Enqueue(printJob);
+				Log.Debug("RunAsync(printJob={PrintJob}): taskId → {TaskId}", printJob, taskId);
 
                 if (printJob.AsyncTimeout == 0)
                 {
@@ -282,14 +302,18 @@
             }
             catch (StandardizedStatusMessageException e)
             {
+				Log.Error("Exception in RunAsync(printJob={PrintJob}): {Arg1}", printJob, e.Message);
                 var status = new DeviceStatus();
+				Log.Debug("RunAsync(printJob={PrintJob}): status → {Status}", printJob, status);
                 status.AddError(e.Code, e.Message);
+				Log.Debug("<<< Exiting RunAsync(printJob={PrintJob})", printJob);
                 return status;
             }
         }
 
         public object? RunTask(string taskId, int asyncTimeout)
         {
+			Log.Information(">>> Entering RunTask(taskId={TaskId},asyncTimeout={AsyncTimeout})", taskId, asyncTimeout);
             const int timeoutMinimalStep = 50; // check the queue every 50 ms
             if (asyncTimeout < 0) asyncTimeout = PrintJob.DefaultTimeout;
             if (Tasks.TryGetValue(taskId, out var printJob)
@@ -311,11 +335,13 @@
             else
             {
                 return null;
+			Log.Debug("<<< Exiting RunTask(taskId={TaskId},asyncTimeout={AsyncTimeout})", taskId, asyncTimeout);
             }
         }
 
         private void EnsureConsumer()
         {
+			Log.Information(">>> Entering EnsureConsumer()");
             lock (consumerSyncLock)
             {
                 if (consumer == null || consumer.IsCompleted || consumer.IsFaulted)
@@ -323,10 +349,12 @@
                     consumer = Task.Factory.StartNew(() => ConsumeTaskQueue(), TaskCreationOptions.LongRunning);
                 }
             }
+			Log.Debug("<<< Exiting EnsureConsumer()");
         }
 
         public void ConsumeTaskQueue()
         {
+			Log.Information(">>> Entering ConsumeTaskQueue()");
             // Run all tasks from the TaskQueue
             while (TaskQueue.TryDequeue(out var taskId))
             {
@@ -339,10 +367,12 @@
                     printJob?.Run();
                 }
             }
+			Log.Debug("<<< Exiting ConsumeTaskQueue()");
         }
 
         public string Enqueue(PrintJob printJob)
         {
+			Log.Information(">>> Entering Enqueue(printJob={PrintJob})", printJob);
             // CASE: Clearing Expired Tasks
             // ClearExpiredTasks();
 
@@ -360,12 +390,15 @@
                 // maximum length of 60 characters validation
                 if (taskId.Length > 60)
                 {
+					Log.Error("Throwing StandardizedStatusMessageException from Enqueue(printJob={PrintJob})", printJob);
                     throw new StandardizedStatusMessageException($"Task Id is too long", "E110");
                 }
 
                 // printable characters validation
                 var nonPrintableCharactersPattern = @"[\x01-\x1F]";
+				Log.Debug("Enqueue(printJob={PrintJob}): nonPrintableCharactersPattern → {NonPrintableCharactersPattern}", printJob, nonPrintableCharactersPattern);
                 Match match = Regex.Match(taskId, nonPrintableCharactersPattern, RegexOptions.IgnoreCase);
+				Log.Debug("Enqueue(printJob={PrintJob}): match → {Match}", printJob, match);
                 if (match.Success)
                 {
                     throw new StandardizedStatusMessageException($"Use only printable charaters for Task Id", "E110");
@@ -383,11 +416,13 @@
             // Ensure that there is a running ConsumerThread, that will process the queue
             EnsureConsumer();
 
+			Log.Debug("<<< Exiting Enqueue(printJob={PrintJob})", printJob);
             return taskId;
         }
 
         public void AddPrinter(IFiscalPrinter printer)
         {
+			Log.Information(">>> Entering AddPrinter(printer={Printer})", printer);
             // We use serial number of local connected fiscal printers as Printer ID
             var baseID = printer.DeviceInfo.SerialNumber.ToLowerInvariant();
 
@@ -406,10 +441,12 @@
             PrintersInfo.Add(printerID, printer.DeviceInfo);
             Printers.Add(printerID, printer);
             Log.Information($"Found {printerID}: {printer.DeviceInfo.Uri}");
+			Log.Debug("<<< Exiting AddPrinter(printer={Printer})", printer);
         }
 
         public bool ConfigurePrinter(PrinterConfigWithId printerConfigWithId)
         {
+			Log.Information(">>> Entering ConfigurePrinter(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
             if (String.IsNullOrEmpty(printerConfigWithId.Id) || String.IsNullOrEmpty(printerConfigWithId.Uri))
             {
                 return false;
@@ -418,12 +455,14 @@
             {
                 ConfiguredPrinters.Add(printerConfigWithId.Id, printerConfigWithId);
                 WriteOptions();
+				Log.Debug("<<< Exiting ConfigurePrinter(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
                 return true;
             }
         }
 
         public bool DeletePrinter(PrinterConfigWithId printerConfigWithId)
         {
+			Log.Information(">>> Entering DeletePrinter(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
             if (String.IsNullOrEmpty(printerConfigWithId.Id))
             {
                 return false;
@@ -435,6 +474,7 @@
                     return false;
                 }
                 WriteOptions();
+				Log.Debug("<<< Exiting DeletePrinter(printerConfigWithId={PrinterConfigWithId})", printerConfigWithId);
                 return true;
             }
         }
